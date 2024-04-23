@@ -42,7 +42,9 @@ export default function createGraphScene(canvas) {
     toggleLabel,
     louvain,
     separateClusters,
-    coarsenGraph
+    coarsenGraph,
+    reattachNode,
+    coarseOnce
   };
 
   function loadGraph(newGraph) {
@@ -73,13 +75,53 @@ export default function createGraphScene(canvas) {
   }
 
   function coarsenGraph() {
-    if (clusters != undefined) {
-      loadGraph(coarsen(graph, clusters));
-    }
+    // if (clusters != undefined) {
+    //   const newLocal = coarsen(graph, clusters);
+    //   loadGraph(newLocal);
+    // }
+
+    graph.forEachNode((node) => console.log("graph node: " + node.id))
+    var cgraph = coarsen(graph, clusters);
+
+    var x = new Object();
+    coarsen.getSubgraphs(cgraph).forEach(function (subgraph) {
+      var p = [];
+      subgraph.graph.forEachNode(function (node) {
+        p.push(node.id);
+      });
+      x[subgraph.id] = p[0];
+    })
+
+    cgraph.forEachLink((link) => {
+      if (link.toId != link.fromId) {
+        //console.log("link: " + x[link.fromId] + ' => ' + x[link.toId])
+        var bodies_from = layout.getBody(x[link.fromId]);
+        var bodies_to = layout.getBody(x[link.toId]);
+        layout.simulator.addSpring(bodies_from, bodies_to, 50, 0.8)
+      }
+
+    })
   }
 
   function toggleLabel() {
     drawLabels = !drawLabels;
+  }
+
+  function reattachNode(message) {
+    console.log("message is " + message)
+  }
+
+  function coarseOnce() {
+    //does not work because resulting graph is not same type as previous graph and we dont find link.ui property
+    console.log(clusters);
+    console.log(clusters != undefined);
+    if (clusters != undefined) {
+      if (!clusters.canCoarse()) { console.log('Cant coarse'); return }
+      console.log('coarsing baby');
+      graph = coarsen(graph, clusters);
+      clusters = detectClusters(graph);
+      recolorNode(graph, clusters, layout, getColor);
+    }
   }
 
   function separateClusters() {
@@ -98,19 +140,7 @@ export default function createGraphScene(canvas) {
 
   function louvain() {
     clusters = detectClusters(graph);
-    graph.forEachNode(node => {
-      var currentClass = clusters.getClass(node.id);
-      var point = layout.getNodePosition(node.id);
-      let size = 1;
-      if (node.data && node.data.size) {
-        size = node.data.size;
-      } else {
-        if (!node.data) node.data = {};
-        node.data.size = size;
-      }
-
-      node.ui = { size, position: [point.x, point.y, point.z || 0], color: getColor(currentClass) };
-    });
+    recolorNode(graph, clusters, layout, getColor);
   }
 
   function getColor(id) {
@@ -150,7 +180,7 @@ export default function createGraphScene(canvas) {
         node.data.size = size;
       }
 
-      size=1;
+      size = 1;
       node.ui = { size, position: [point.x, point.y, point.z || 0], color: 0x90f8fcff };
       node.uiId = nodes.add(node.ui);
     });
@@ -232,4 +262,20 @@ export default function createGraphScene(canvas) {
     scene.dispose();
     bus.off('load-graph', loadGraph);
   }
+}
+
+function recolorNode(graph, clusters, layout, getColor) {
+  graph.forEachNode(node => {
+    var currentClass = clusters.getClass(node.id);
+    var point = layout.getNodePosition(node.id);
+    let size = 1;
+    if (node.data && node.data.size) {
+      size = node.data.size;
+    } else {
+      if (!node.data) node.data = {};
+      node.data.size = size;
+    }
+
+    node.ui = { size, position: [point.x, point.y, point.z || 0], color: getColor(currentClass) };
+  });
 }

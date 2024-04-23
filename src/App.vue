@@ -1,9 +1,14 @@
 <script>
 import createGraphScene from './lib/createGraphScene';
+import { ref } from 'vue'
+
+
 
 export default {
+  
   data() {
     return {
+      message: '',
       stepCount: 2000
     }
   },
@@ -23,6 +28,12 @@ export default {
     },
     coarsenGraph(){
       this.scene.coarsenGraph();
+    },
+    reattachNode(){
+      this.scene.reattachNode(this.message);
+    },
+    coarseOnce(){
+      this.scene.coarseOnce();
     }
   },
 
@@ -41,8 +52,11 @@ export default {
   <a href="#" @click.prevent='runLayout' class='btn-command'>Make {{stepCount}} layout steps</a>
   <a href="#" @click.prevent='toggleLabel' class='btn-command'>Togle Label</a>
   <a href="#" @click.prevent='louvain' class='btn-command'>Louvain</a>
-  <a href="#" @click.prevent='separateClusters' class='btn-command'>Separate clusters</a>
   <a href="#" @click.prevent='coarsenGraph' class='btn-command'>Coarsen</a>
+  <a href="#" @click.prevent='separateClusters' class='btn-command'>Separate clusters</a>
+	<!-- <input v-model="message" placeholder="reattach node below count:" /> -->
+  <!-- <a href="#" @click.prevent='reattachNode' class='btn-command'>reattach nodes</a> -->
+  <!-- <a href="#" @click.prevent='coarseOnce' class='btn-command'>coarse once</a> -->
 </template>
 
 <style>
