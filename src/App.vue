@@ -4,7 +4,7 @@ import createGraphScene from './lib/createGraphScene';
 export default {
   data() {
     return {
-      stepCount: 200
+      stepCount: 2000
     }
   },
 
@@ -12,6 +12,18 @@ export default {
     runLayout() {
       this.scene.runLayout(this.stepCount);
     },
+    toggleLabel(){
+      this.scene.toggleLabel();
+    },
+    louvain(){
+      this.scene.louvain();
+    },
+    separateClusters(){
+      this.scene.separateClusters();
+    },
+    coarsenGraph(){
+      this.scene.coarsenGraph();
+    }
   },
 
   mounted() {
@@ -27,8 +39,11 @@ export default {
 
 <template>
   <a href="#" @click.prevent='runLayout' class='btn-command'>Make {{stepCount}} layout steps</a>
+  <a href="#" @click.prevent='toggleLabel' class='btn-command'>Togle Label</a>
+  <a href="#" @click.prevent='louvain' class='btn-command'>Louvain</a>
+  <a href="#" @click.prevent='separateClusters' class='btn-command'>Separate clusters</a>
+  <a href="#" @click.prevent='coarsenGraph' class='btn-command'>Coarsen</a>
 </template>
-
 
 <style>
 #app {

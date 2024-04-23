@@ -9,15 +9,18 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
   },
   "dependencies": {
-    "vue": "^3.2.33",
     "miserables": "^2.0.0",
+    "ngraph.coarsen": "^1.5.0",
     "ngraph.events": "^1.0.0",
     "ngraph.forcelayout": "^3.1.0",
-    "ngraph.fromdot": "^6.0.0",
+    "ngraph.fromdot": "^6.0.1",
     "ngraph.fromjson": "^3.0.0",
     "ngraph.generators": "^19.0.0",
     "ngraph.graph": "^19.1.0",
+    "ngraph.hde": "^1.0.1",
+    "ngraph.louvain": "^2.0.0",
     "ngraph.todot": "^3.0.2",
+    "vue": "^3.2.33",
     "w-gl": "^0.20.0"
   },
   "devDependencies": {
