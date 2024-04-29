@@ -32,9 +32,9 @@ export default {
     reattachNode(){
       this.scene.reattachNode(this.message);
     },
-    coarseOnce(){
-      this.scene.coarseOnce();
-    }
+    // coarseOnce(){
+    //   this.scene.coarseOnce();
+    // }
   },
 
   mounted() {
@@ -54,8 +54,8 @@ export default {
   <a href="#" @click.prevent='louvain' class='btn-command'>Louvain</a>
   <a href="#" @click.prevent='coarsenGraph' class='btn-command'>Coarsen</a>
   <a href="#" @click.prevent='separateClusters' class='btn-command'>Separate clusters</a>
-	<!-- <input v-model="message" placeholder="reattach node below count:" /> -->
-  <!-- <a href="#" @click.prevent='reattachNode' class='btn-command'>reattach nodes</a> -->
+  <a href="#" @click.prevent='reattachNode' class='btn-command'>reattach nodes</a> 
+	<input v-model="message" placeholder="reattach node below count:" />
   <!-- <a href="#" @click.prevent='coarseOnce' class='btn-command'>coarse once</a> -->
 </template>
 

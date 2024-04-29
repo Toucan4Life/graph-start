@@ -32,7 +32,9 @@ export default function createGraphScene(canvas) {
   let clusters = undefined;
   let lastUsed = 0;
   let idToIndex = Object.create(null);
-
+  var nodeInSubgraph = new Object();
+  var linkToRemove = [];
+  var addedSprings = [];
   loadGraph(getGraph());
   bus.on('load-graph', loadGraph);
 
@@ -44,10 +46,13 @@ export default function createGraphScene(canvas) {
     separateClusters,
     coarsenGraph,
     reattachNode,
-    coarseOnce
+    // coarseOnce
   };
 
   function loadGraph(newGraph) {
+    addedSprings = [];
+    nodeInSubgraph = new Object();
+    linkToRemove = [];
     if (scene) {
       scene.dispose();
       scene = null
@@ -57,7 +62,7 @@ export default function createGraphScene(canvas) {
     graph = newGraph
 
     layout = createLayout(graph, {
-      timeStep: 0.5,
+      timeStep: 1,
       springLength: 10,
       springCoefficient: 0.8,
       gravity: -12,
@@ -65,7 +70,7 @@ export default function createGraphScene(canvas) {
     });
 
     layout.step();
-    initUIElements();
+    initUIElements(true);
 
     rafHandle = requestAnimationFrame(frame);
   }
@@ -75,58 +80,84 @@ export default function createGraphScene(canvas) {
   }
 
   function coarsenGraph() {
+    console.log("Coarsin...")
     // if (clusters != undefined) {
     //   const newLocal = coarsen(graph, clusters);
     //   loadGraph(newLocal);
     // }
 
-    graph.forEachNode((node) => console.log("graph node: " + node.id))
+    //graph.forEachNode((node) => console.log("graph node: " + node.id))
     var cgraph = coarsen(graph, clusters);
 
-    var x = new Object();
+
     coarsen.getSubgraphs(cgraph).forEach(function (subgraph) {
       var p = [];
       subgraph.graph.forEachNode(function (node) {
         p.push(node.id);
       });
-      x[subgraph.id] = p[0];
+      nodeInSubgraph[subgraph.id] = p;
     })
 
     cgraph.forEachLink((link) => {
       if (link.toId != link.fromId) {
         //console.log("link: " + x[link.fromId] + ' => ' + x[link.toId])
-        var bodies_from = layout.getBody(x[link.fromId]);
-        var bodies_to = layout.getBody(x[link.toId]);
-        layout.simulator.addSpring(bodies_from, bodies_to, 50, 0.8)
+        var bodies_from = layout.getBody(nodeInSubgraph[link.fromId][0]);
+        var bodies_to = layout.getBody(nodeInSubgraph[link.toId][0]);
+        addedSprings.push(layout.simulator.addSpring(bodies_from, bodies_to, 50, 0.8));
       }
 
     })
+
+    console.log("Coarsin done")
   }
 
   function toggleLabel() {
     drawLabels = !drawLabels;
   }
 
-  function reattachNode(message) {
-    console.log("message is " + message)
+  function reattachNode(size) {
+    var linkToAdd = [];
+    console.log("reattaching...")
+    if (clusters != undefined) {
+      for (const [key, value] of Object.entries(nodeInSubgraph)) {
+        if (value.length <= size) {
+          console.log(key, value);
+          console.log(addedSprings[0]);
+          addedSprings.filter(spring => value.includes(spring.from.id) || value.includes(spring.to.id)).forEach(spring=> layout.simulator.removeSpring(spring))     
+          const newLocal_1 = linkToRemove.filter(link => clusters.getClass(link.fromId) == key || clusters.getClass(link.toId) == key);
+          const newLocal = newLocal_1.reduce((seed, item) => { return (seed && seed.data.weight > item.data.weight) ? seed : item; }, null);
+          //console.log("link found " + newLocal.toId.toString() + " " + newLocal.fromId.toString() + " " + newLocal.data.weight)
+          linkToAdd.push(newLocal)
+        }
+      }
+
+      linkToAdd.forEach((link) => {
+        graph.addLink(link.fromId, link.toId, link.data)
+      })
+      scene.dispose();
+      scene = null
+      scene = initScene();
+      initUIElements(false);
+    }
+    console.log("reattaching done")
   }
 
-  function coarseOnce() {
-    //does not work because resulting graph is not same type as previous graph and we dont find link.ui property
-    console.log(clusters);
-    console.log(clusters != undefined);
-    if (clusters != undefined) {
-      if (!clusters.canCoarse()) { console.log('Cant coarse'); return }
-      console.log('coarsing baby');
-      graph = coarsen(graph, clusters);
-      clusters = detectClusters(graph);
-      recolorNode(graph, clusters, layout, getColor);
-    }
-  }
+  // function coarseOnce() {
+  //   //does not work because resulting graph is not same type as previous graph and we dont find link.ui property
+  //   console.log(clusters);
+  //   console.log(clusters != undefined);
+  //   if (clusters != undefined) {
+  //     if (!clusters.canCoarse()) { console.log('Cant coarse'); return }
+  //     console.log('coarsing baby');
+  //     graph = coarsen(graph, clusters);
+  //     clusters = detectClusters(graph);
+  //     recolorNode(graph, clusters, layout, getColor);
+  //   }
+  // }
 
   function separateClusters() {
+    console.log("Separating...")
     if (clusters != undefined) {
-      var linkToRemove = [];
       graph.forEachLink(link => {
         if (link != undefined && clusters.getClass(link.fromId) != clusters.getClass(link.toId)) {
           linkToRemove.push(link);
@@ -135,12 +166,20 @@ export default function createGraphScene(canvas) {
       });
 
       linkToRemove.forEach((link) => { graph.removeLink(link); });
+      scene.dispose();
+      scene = null
+      scene = initScene();
+      initUIElements(false);
     }
+
+    console.log("Separating done")
   }
 
   function louvain() {
+    console.log("Louvain...")
     clusters = detectClusters(graph);
     recolorNode(graph, clusters, layout, getColor);
+    console.log("Louvain done")
   }
 
   function getColor(id) {
@@ -165,7 +204,7 @@ export default function createGraphScene(canvas) {
     return scene;
   }
 
-  function initUIElements() {
+  function initUIElements(shouldEraseColor) {
     nodes = new PointCollection(scene.getGL(), {
       capacity: graph.getNodesCount()
     });
@@ -181,7 +220,8 @@ export default function createGraphScene(canvas) {
       }
 
       size = 1;
-      node.ui = { size, position: [point.x, point.y, point.z || 0], color: 0x90f8fcff };
+      if(shouldEraseColor){      node.ui = { size, position: [point.x, point.y, point.z || 0], color: 0x90f8fcff };}
+      else {      node.ui = { size, position: [point.x, point.y, point.z || 0], color: node.ui.color };}
       node.uiId = nodes.add(node.ui);
     });
 
