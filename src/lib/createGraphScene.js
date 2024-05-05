@@ -46,7 +46,7 @@ export default function createGraphScene(canvas) {
     separateClusters,
     coarsenGraph,
     reattachNode,
-    // coarseOnce
+    cut
   };
 
   function loadGraph(newGraph) {
@@ -60,7 +60,6 @@ export default function createGraphScene(canvas) {
     }
     scene = initScene();
     graph = newGraph
-
     layout = createLayout(graph, {
       timeStep: 1,
       springLength: 10,
@@ -79,6 +78,22 @@ export default function createGraphScene(canvas) {
     layoutSteps += stepsCount;
   }
 
+  function cut(threshold){
+    console.log("cutting...")
+    var linkToRemovelocal = []
+    graph.forEachLink(link=> {
+      if(link.data.weight < threshold 
+        //&& graph.getLinks(link.fromId).some(links=> links.data.weight > link.data.weight) 
+        //&& graph.getLinks(link.toId).some(links=> links.data.weight > link.data.weight)
+      ){
+        link.ui.color = 0x000000
+        //linkToRemovelocal.push(link)
+      }
+    })
+    //linkToRemovelocal.forEach(link => graph.removeLink(link))
+    console.log("cutting done")
+  }
+
   function coarsenGraph() {
     console.log("Coarsin...")
     // if (clusters != undefined) {
@@ -94,6 +109,7 @@ export default function createGraphScene(canvas) {
       var p = [];
       subgraph.graph.forEachNode(function (node) {
         p.push(node.id);
+        //console.log(node);
       });
       nodeInSubgraph[subgraph.id] = p;
     })
@@ -103,7 +119,7 @@ export default function createGraphScene(canvas) {
         //console.log("link: " + x[link.fromId] + ' => ' + x[link.toId])
         var bodies_from = layout.getBody(nodeInSubgraph[link.fromId][0]);
         var bodies_to = layout.getBody(nodeInSubgraph[link.toId][0]);
-        addedSprings.push(layout.simulator.addSpring(bodies_from, bodies_to, 50, 0.8));
+        addedSprings.push(layout.simulator.addSpring(bodies_from, bodies_to, 300, 0.8));
       }
 
     })
@@ -121,8 +137,8 @@ export default function createGraphScene(canvas) {
     if (clusters != undefined) {
       for (const [key, value] of Object.entries(nodeInSubgraph)) {
         if (value.length <= size) {
-          console.log(key, value);
-          console.log(addedSprings[0]);
+          //console.log(key, value);
+          //console.log(addedSprings[0]);
           addedSprings.filter(spring => value.includes(spring.from.id) || value.includes(spring.to.id)).forEach(spring=> layout.simulator.removeSpring(spring))     
           const newLocal_1 = linkToRemove.filter(link => clusters.getClass(link.fromId) == key || clusters.getClass(link.toId) == key);
           const newLocal = newLocal_1.reduce((seed, item) => { return (seed && seed.data.weight > item.data.weight) ? seed : item; }, null);
@@ -132,7 +148,8 @@ export default function createGraphScene(canvas) {
       }
 
       linkToAdd.forEach((link) => {
-        graph.addLink(link.fromId, link.toId, link.data)
+        if (link != null) {
+          graph.addLink(link.fromId, link.toId, link.data)}
       })
       scene.dispose();
       scene = null
@@ -193,7 +210,7 @@ export default function createGraphScene(canvas) {
 
   function initScene() {
     let scene = createScene(canvas);
-    scene.setClearColor(12 / 255, 41 / 255, 82 / 255, 1)
+    scene.setClearColor(0,0,0, 1)
     let initialSceneSize = 40;
     scene.setViewBox({
       left: -initialSceneSize,

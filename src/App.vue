@@ -9,7 +9,8 @@ export default {
   data() {
     return {
       message: '',
-      stepCount: 2000
+      stepCount: 2000,
+      treshold:0
     }
   },
 
@@ -32,9 +33,9 @@ export default {
     reattachNode(){
       this.scene.reattachNode(this.message);
     },
-    // coarseOnce(){
-    //   this.scene.coarseOnce();
-    // }
+    cut(){
+      this.scene.cut(this.threshold);
+    }
   },
 
   mounted() {
@@ -56,7 +57,8 @@ export default {
   <a href="#" @click.prevent='separateClusters' class='btn-command'>Separate clusters</a>
   <a href="#" @click.prevent='reattachNode' class='btn-command'>reattach nodes</a> 
 	<input v-model="message" placeholder="reattach node below count:" />
-  <!-- <a href="#" @click.prevent='coarseOnce' class='btn-command'>coarse once</a> -->
+  <a href="#" @click.prevent='cut' class='btn-command'>cut</a> 
+	<input v-model="threshold" placeholder="cut threshold" />
 </template>
 
 <style>
