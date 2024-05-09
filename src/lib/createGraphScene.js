@@ -7,6 +7,8 @@ import getGraph from './getGraph';
 import createLayout from 'ngraph.forcelayout';
 import detectClusters from 'ngraph.louvain';
 import coarsen from 'ngraph.coarsen';
+import toDot from 'ngraph.todot';
+import axios from 'axios'
 export default function createGraphScene(canvas) {
   let drawLinks = true;
   let drawLabels = true;
@@ -46,7 +48,8 @@ export default function createGraphScene(canvas) {
     separateClusters,
     coarsenGraph,
     reattachNode,
-    cut
+    cut,
+    ship
   };
 
   function loadGraph(newGraph) {
@@ -78,14 +81,14 @@ export default function createGraphScene(canvas) {
     layoutSteps += stepsCount;
   }
 
-  function cut(threshold){
+  function cut(threshold) {
     console.log("cutting...")
     var linkToRemovelocal = []
-    graph.forEachLink(link=> {
-      if(link.data.weight < threshold 
+    graph.forEachLink(link => {
+      if (link.data.weight < threshold
         //&& graph.getLinks(link.fromId).some(links=> links.data.weight > link.data.weight) 
         //&& graph.getLinks(link.toId).some(links=> links.data.weight > link.data.weight)
-      ){
+      ) {
         link.ui.color = 0x000000
         //linkToRemovelocal.push(link)
       }
@@ -139,7 +142,7 @@ export default function createGraphScene(canvas) {
         if (value.length <= size) {
           //console.log(key, value);
           //console.log(addedSprings[0]);
-          addedSprings.filter(spring => value.includes(spring.from.id) || value.includes(spring.to.id)).forEach(spring=> layout.simulator.removeSpring(spring))     
+          addedSprings.filter(spring => value.includes(spring.from.id) || value.includes(spring.to.id)).forEach(spring => layout.simulator.removeSpring(spring))
           const newLocal_1 = linkToRemove.filter(link => clusters.getClass(link.fromId) == key || clusters.getClass(link.toId) == key);
           const newLocal = newLocal_1.reduce((seed, item) => { return (seed && seed.data.weight > item.data.weight) ? seed : item; }, null);
           //console.log("link found " + newLocal.toId.toString() + " " + newLocal.fromId.toString() + " " + newLocal.data.weight)
@@ -149,7 +152,8 @@ export default function createGraphScene(canvas) {
 
       linkToAdd.forEach((link) => {
         if (link != null) {
-          graph.addLink(link.fromId, link.toId, link.data)}
+          graph.addLink(link.fromId, link.toId, link.data)
+        }
       })
       scene.dispose();
       scene = null
@@ -199,6 +203,30 @@ export default function createGraphScene(canvas) {
     console.log("Louvain done")
   }
 
+  function ship() {
+    console.log("Shipping...")
+
+    var cgraph = coarsen(graph, clusters);
+
+    coarsen.getSubgraphs(cgraph).forEach(function (subgraph) {
+      //console.log(subgraph.graph)
+      var dotContent = toDot(subgraph.graph)
+      var json=JSON.stringify(dotContent)
+      try {
+        fetch("http://127.0.0.1:3010/", {
+          method: "POST",
+          body: dotContent,
+          headers: {
+            "Content-type": "application/json; charset=UTF-8"
+          }
+        });
+      } catch(error) {
+        console.log("There was a problem adding posting")
+      }
+    })
+    console.log("Shippping done")
+  }
+
   function getColor(id) {
     var idx = idToIndex[id];
     if (idx === undefined) {
@@ -210,7 +238,7 @@ export default function createGraphScene(canvas) {
 
   function initScene() {
     let scene = createScene(canvas);
-    scene.setClearColor(0,0,0, 1)
+    scene.setClearColor(0, 0, 0, 1)
     let initialSceneSize = 40;
     scene.setViewBox({
       left: -initialSceneSize,
@@ -237,8 +265,8 @@ export default function createGraphScene(canvas) {
       }
 
       size = 1;
-      if(shouldEraseColor){      node.ui = { size, position: [point.x, point.y, point.z || 0], color: 0x90f8fcff };}
-      else {      node.ui = { size, position: [point.x, point.y, point.z || 0], color: node.ui.color };}
+      if (shouldEraseColor) { node.ui = { size, position: [point.x, point.y, point.z || 0], color: 0x90f8fcff }; }
+      else { node.ui = { size, position: [point.x, point.y, point.z || 0], color: node.ui.color }; }
       node.uiId = nodes.add(node.ui);
     });
 

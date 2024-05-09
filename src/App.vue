@@ -35,6 +35,9 @@ export default {
     },
     cut(){
       this.scene.cut(this.threshold);
+    },
+    ship(){
+      this.scene.ship();
     }
   },
 
@@ -59,6 +62,7 @@ export default {
 	<input v-model="message" placeholder="reattach node below count:" />
   <a href="#" @click.prevent='cut' class='btn-command'>cut</a> 
 	<input v-model="threshold" placeholder="cut threshold" />
+  <a href="#" @click.prevent='ship' class='btn-command'>Ship it !</a>
 </template>
 
 <style>
