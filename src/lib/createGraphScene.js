@@ -37,6 +37,7 @@ export default function createGraphScene(canvas) {
   var nodeInSubgraph = new Object();
   var linkToRemove = [];
   var addedSprings = [];
+  var subgraphs = [];
   loadGraph(getGraph());
   bus.on('load-graph', loadGraph);
 
@@ -56,6 +57,7 @@ export default function createGraphScene(canvas) {
     addedSprings = [];
     nodeInSubgraph = new Object();
     linkToRemove = [];
+    subgraphs = [];
     if (scene) {
       scene.dispose();
       scene = null
@@ -109,6 +111,7 @@ export default function createGraphScene(canvas) {
 
 
     coarsen.getSubgraphs(cgraph).forEach(function (subgraph) {
+      subgraphs.push(subgraph)
       var p = [];
       subgraph.graph.forEachNode(function (node) {
         p.push(node.id);
@@ -137,6 +140,8 @@ export default function createGraphScene(canvas) {
   function reattachNode(size) {
     var linkToAdd = [];
     console.log("reattaching...")
+    var froms = [];
+    console.log(subgraphs)
     if (clusters != undefined) {
       for (const [key, value] of Object.entries(nodeInSubgraph)) {
         if (value.length <= size) {
@@ -146,10 +151,22 @@ export default function createGraphScene(canvas) {
           const newLocal_1 = linkToRemove.filter(link => clusters.getClass(link.fromId) == key || clusters.getClass(link.toId) == key);
           const newLocal = newLocal_1.reduce((seed, item) => { return (seed && seed.data.weight > item.data.weight) ? seed : item; }, null);
           //console.log("link found " + newLocal.toId.toString() + " " + newLocal.fromId.toString() + " " + newLocal.data.weight)
-          linkToAdd.push(newLocal)
+          var graphFrom = subgraphs.find(subgraph => subgraph.id == key);
+          froms.push(graphFrom.id)
+          if (newLocal != null) {
+            linkToAdd.push(newLocal)
+            var clusterTo = clusters.getClass(newLocal.fromId) == key ? clusters.getClass(newLocal.toId) : clusters.getClass(newLocal.fromId)
+            //console.log("need to merge cluster " + key + " into cluster " + clusterTo);
+            var graphTo = subgraphs.find(subgraph => subgraph.id == clusterTo);
+            graphFrom.graph.forEachNode(node => graphTo.graph.addNode(node.id, node.data))
+            graphFrom.graph.forEachLink(link => graphTo.graph.addLink(link.fromId, link.toId, link.data))
+            graphTo.graph.addLink(newLocal.fromId, newLocal.toId, newLocal.data)
+            subgraphs.forEach((item, i) => { if (item.id == graphTo.id) subgraphs[i] = graphTo; });
+          }
         }
       }
-
+      subgraphs = subgraphs.filter((item) => !froms.includes(item.id))
+      console.log(subgraphs)
       linkToAdd.forEach((link) => {
         if (link != null) {
           graph.addLink(link.fromId, link.toId, link.data)
@@ -206,12 +223,9 @@ export default function createGraphScene(canvas) {
   function ship() {
     console.log("Shipping...")
 
-    var cgraph = coarsen(graph, clusters);
+    subgraphs.forEach(function (subgraph) {
 
-    coarsen.getSubgraphs(cgraph).forEach(function (subgraph) {
-      //console.log(subgraph.graph)
       var dotContent = toDot(subgraph.graph)
-      var json=JSON.stringify(dotContent)
       try {
         fetch("http://127.0.0.1:3010/", {
           method: "POST",
@@ -220,7 +234,7 @@ export default function createGraphScene(canvas) {
             "Content-type": "application/json; charset=UTF-8"
           }
         });
-      } catch(error) {
+      } catch (error) {
         console.log("There was a problem adding posting")
       }
     })
