@@ -45,6 +45,7 @@ export default function createGraphScene(canvas) {
     dispose,
     runLayout,
     toggleLabel,
+    toggleLink,
     louvain,
     separateClusters,
     coarsenGraph,
@@ -137,6 +138,9 @@ export default function createGraphScene(canvas) {
     drawLabels = !drawLabels;
   }
 
+  function toggleLink() {
+    drawLinks = !drawLinks;
+  }
   function reattachNode(size) {
     var linkToAdd = [];
     console.log("reattaching...")

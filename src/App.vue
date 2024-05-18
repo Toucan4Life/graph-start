@@ -21,6 +21,9 @@ export default {
     toggleLabel(){
       this.scene.toggleLabel();
     },
+    toggleLink(){
+      this.scene.toggleLink();
+    },
     louvain(){
       this.scene.louvain();
     },
@@ -55,6 +58,7 @@ export default {
 <template>
   <a href="#" @click.prevent='runLayout' class='btn-command'>Make {{stepCount}} layout steps</a>
   <a href="#" @click.prevent='toggleLabel' class='btn-command'>Togle Label</a>
+  <a href="#" @click.prevent='toggleLink' class='btn-command'>Togle Link</a>
   <a href="#" @click.prevent='louvain' class='btn-command'>Louvain</a>
   <a href="#" @click.prevent='coarsenGraph' class='btn-command'>Coarsen</a>
   <a href="#" @click.prevent='separateClusters' class='btn-command'>Separate clusters</a>
