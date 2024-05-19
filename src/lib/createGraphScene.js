@@ -226,9 +226,16 @@ export default function createGraphScene(canvas) {
 
   function ship() {
     console.log("Shipping...")
-
+    // const newLocal = layout.getNodePosition(1);
+    // console.log("\""+newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)+"\"")
     subgraphs.forEach(function (subgraph) {
-
+      subgraph.graph.forEachNode(node => {
+        
+        var newLocal = layout.getNodePosition(node.id);
+        if (node.data === undefined){
+          node.data = new Object()
+        }
+        node.data.l =newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)})
       var dotContent = toDot(subgraph.graph)
       try {
         fetch("http://127.0.0.1:3010/", {
@@ -314,6 +321,9 @@ export default function createGraphScene(canvas) {
     if (layoutSteps > 0) {
       layoutSteps -= 1;
       layout.step();
+
+    // const newLocal = layout.getNodePosition(1);
+    // console.log("\""+newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)+"\"")
       // Drawing labels is heavy, so avoid it if we don't need it
       redrawLabels();
     }
