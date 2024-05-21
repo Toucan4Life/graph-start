@@ -51,7 +51,8 @@ export default function createGraphScene(canvas) {
     coarsenGraph,
     reattachNode,
     cut,
-    ship
+    ship,
+    name
   };
 
   function loadGraph(newGraph) {
@@ -228,29 +229,91 @@ export default function createGraphScene(canvas) {
     console.log("Shipping...")
     // const newLocal = layout.getNodePosition(1);
     // console.log("\""+newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)+"\"")
+    var i = 0;
     subgraphs.forEach(function (subgraph) {
       subgraph.graph.forEachNode(node => {
-        
+
         var newLocal = layout.getNodePosition(node.id);
-        if (node.data === undefined){
+        if (node.data === undefined) {
           node.data = new Object()
         }
-        node.data.l =newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)})
+        node.data.l = newLocal.x.toFixed(3) + "," + newLocal.y.toFixed(3)
+      })
       var dotContent = toDot(subgraph.graph)
       try {
         fetch("http://127.0.0.1:3010/", {
           method: "POST",
           body: dotContent,
           headers: {
-            "Content-type": "application/json; charset=UTF-8"
+            "Content-type": "application/json; charset=UTF-8",
+            "number": i
+          }
+        });
+      } catch (error) {
+        console.log("There was a problem adding posting")
+      }
+      i = i + 1;
+    })
+    console.log("Shippping done")
+  }
+
+  function name() {
+    console.log("Shipping name...")
+    var namesArray = [];
+    // const newLocal = layout.getNodePosition(1);
+    // console.log("\""+newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)+"\"")
+    subgraphs.forEach(function (subgraph) {
+      subgraph.graph.forEachNode(node => {
+        var newLocal = layout.getNodePosition(node.id);
+        namesArray.push({ 'Name': node.data.label, 'x': newLocal.x.toFixed(3), 'y': newLocal.y.toFixed(3) })
+      })
+      //  namesArray.sort((a, b) => a.Name < b.Name)
+
+    })
+    var arrays = groupByName(namesArray)
+    arrays.forEach(gamelist => {
+      try {
+        fetch("http://127.0.0.1:3010/names", {
+          method: "POST",
+          body: JSON.stringify(gamelist.map(element => [element.Name, parseFloat(element.x), parseFloat(element.y)])),
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+            "firstChar": gamelist[0].Name[0]
           }
         });
       } catch (error) {
         console.log("There was a problem adding posting")
       }
     })
-    console.log("Shippping done")
+
+    console.log("Shippping name done")
   }
+
+  function groupByName(strings) {
+    // Create an object to hold the groups
+    const groups = {};
+
+    // Iterate through the sorted list of strings
+    strings.forEach(string => {
+      // Get the first character of the current string
+      //console.log(string)
+      const firstChar = string.Name.charAt(0).toLowerCase();
+
+      // If the group for this character doesn't exist, create it
+      if (!groups[firstChar]) {
+        groups[firstChar] = [];
+      }
+
+      // Add the current string to the appropriate group
+      groups[firstChar].push(string);
+    });
+
+    // Convert the grouped object into a list of lists
+    const result = Object.values(groups);
+
+    return result;
+  }
+
 
   function getColor(id) {
     var idx = idToIndex[id];
@@ -322,8 +385,8 @@ export default function createGraphScene(canvas) {
       layoutSteps -= 1;
       layout.step();
 
-    // const newLocal = layout.getNodePosition(1);
-    // console.log("\""+newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)+"\"")
+      // const newLocal = layout.getNodePosition(1);
+      // console.log("\""+newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)+"\"")
       // Drawing labels is heavy, so avoid it if we don't need it
       redrawLabels();
     }

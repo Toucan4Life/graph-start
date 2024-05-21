@@ -12,6 +12,7 @@ var i = 0;
 app.use(cors());
 
 import { fileURLToPath } from 'url';
+import { join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -32,12 +33,32 @@ app.post("/", (r, s) => {
   });
   r.on('end', function () {
     try {
-
-      console.log("Writing " + i + '.dot')
+      console.log("Writing " + r.headers.number + '.dot')
       //const newLocal = JSON.parse(body);
-      fs.writeFileSync(i + '.dot', body.slice(0, -4));
+      fs.writeFileSync(join("v1","graphs",r.headers.number + '.dot'), body.slice(0, -4));
       // file written successfully
       i = i + 1;
+    } catch (err) {
+      console.error(err);
+    }
+    s.write("OK");
+    s.end();
+  });
+
+})
+
+app.post("/names", (r, s) => {
+  var body = "";
+  r.on('readable', function () {
+    body += r.read();
+  });
+  r.on('end', function () {
+    try {
+
+      console.log("Writing " + r.headers.firstchar + '.names')
+      //const newLocal = JSON.parse(body);
+      fs.writeFileSync(join("v1","names",r.headers.firstchar + '.json'), body.slice(0, -4));
+      // file written successfully
     } catch (err) {
       console.error(err);
     }

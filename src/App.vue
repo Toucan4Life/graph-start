@@ -41,6 +41,9 @@ export default {
     },
     ship(){
       this.scene.ship();
+    },
+    name(){
+      this.scene.name();
     }
   },
 
@@ -67,6 +70,7 @@ export default {
   <a href="#" @click.prevent='cut' class='btn-command'>cut</a> 
 	<input v-model="threshold" placeholder="cut threshold" />
   <a href="#" @click.prevent='ship' class='btn-command'>Ship it !</a>
+  <a href="#" @click.prevent='name' class='btn-command'>Name it !</a>
 </template>
 
 <style>
