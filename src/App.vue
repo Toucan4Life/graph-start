@@ -44,6 +44,9 @@ export default {
     },
     name(){
       this.scene.name();
+    },
+    geojson(){
+      this.scene.geojson();
     }
   },
 
@@ -71,6 +74,7 @@ export default {
 	<input v-model="threshold" placeholder="cut threshold" />
   <a href="#" @click.prevent='ship' class='btn-command'>Ship it !</a>
   <a href="#" @click.prevent='name' class='btn-command'>Name it !</a>
+  <a href="#" @click.prevent='geojson' class='btn-command'>GeoJson it !</a>
 </template>
 
 <style>

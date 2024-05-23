@@ -52,7 +52,8 @@ export default function createGraphScene(canvas) {
     reattachNode,
     cut,
     ship,
-    name
+    name,
+    geojson
   };
 
   function loadGraph(newGraph) {
@@ -248,6 +249,8 @@ export default function createGraphScene(canvas) {
             "Content-type": "application/json; charset=UTF-8",
             "number": i
           }
+        }).then(function (response) {
+          console.log("File sent")
         });
       } catch (error) {
         console.log("There was a problem adding posting")
@@ -280,6 +283,8 @@ export default function createGraphScene(canvas) {
             "Content-type": "application/json; charset=UTF-8",
             "firstChar": gamelist[0].Name[0]
           }
+        }).then(function (response) {
+          console.log("File sent")
         });
       } catch (error) {
         console.log("There was a problem adding posting")
@@ -287,6 +292,23 @@ export default function createGraphScene(canvas) {
     })
 
     console.log("Shippping name done")
+  }
+
+  function geojson() {
+    console.log("Geojsoning ...")
+    try {
+      fetch("http://127.0.0.1:3010/geojson", {
+        method: "POST",
+        body: "",
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        }
+      }).then(function (response) {
+        console.log("Geojsoning done")
+      });
+    } catch (error) {
+      console.log("There was a problem adding posting")
+    }
   }
 
   function groupByName(strings) {
@@ -313,7 +335,6 @@ export default function createGraphScene(canvas) {
 
     return result;
   }
-
 
   function getColor(id) {
     var idx = idToIndex[id];
