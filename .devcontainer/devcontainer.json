@@ -10,6 +10,11 @@
 				"Vue.volar"
 			]
 		}
+	},
+	"features": {
+		"ghcr.io/devcontainers-contrib/features/homebrew-package:1": {
+			"package":"tippecanoe"
+		}
 	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
