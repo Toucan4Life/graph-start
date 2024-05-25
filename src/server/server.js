@@ -85,7 +85,7 @@ app.post("/geojson", (r, s) => {
 
   let mygeojson = { "type": "FeatureCollection", "features": [] }
   for (let point of pointsDot) {
-    let feature = { "type": "Feature", "geometry": { "type": "Point", "coordinates": point.data.l }, "properties": { "name": point.data.label } }
+    let feature = { "type": "Feature", "geometry": { "type": "Point", "coordinates":point.data.l.slice(0, -1).split(",").map(str => (parseFloat(str)/100).toFixed(3))}, "properties": { "name": point.data.label } }
     mygeojson.features.push(feature);
   }
   fs.writeFile('./v1/geojson/points.geojson', JSON.stringify(mygeojson), function (err) {
