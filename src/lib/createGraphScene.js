@@ -9,6 +9,7 @@ import detectClusters from 'ngraph.louvain';
 import coarsen from 'ngraph.coarsen';
 import toDot from 'ngraph.todot';
 import axios from 'axios'
+import * as d3 from 'd3-geo-voronoi'
 export default function createGraphScene(canvas) {
   let drawLinks = true;
   let drawLabels = true;
@@ -38,6 +39,8 @@ export default function createGraphScene(canvas) {
   var linkToRemove = [];
   var addedSprings = [];
   var subgraphs = [];
+  var resizeX = 0;
+  var resizeY = 0;
   loadGraph(getGraph());
   bus.on('load-graph', loadGraph);
 
@@ -53,7 +56,8 @@ export default function createGraphScene(canvas) {
     cut,
     ship,
     name,
-    geojson
+    geojson,
+    voronoi
   };
 
   function loadGraph(newGraph) {
@@ -61,6 +65,8 @@ export default function createGraphScene(canvas) {
     nodeInSubgraph = new Object();
     linkToRemove = [];
     subgraphs = [];
+    resizeX = 0;
+    resizeY = 0;
     if (scene) {
       scene.dispose();
       scene = null
@@ -83,7 +89,11 @@ export default function createGraphScene(canvas) {
   }
 
   function runLayout(stepsCount) {
-    layoutSteps += stepsCount;
+    if (layoutSteps > 0) {
+      layoutSteps = 0
+    } else {
+      layoutSteps += stepsCount;
+    }
   }
 
   function cut(threshold) {
@@ -228,6 +238,9 @@ export default function createGraphScene(canvas) {
 
   function ship() {
     console.log("Shipping...")
+    var box = layout.getGraphRect();
+    resizeX = 360.0 / (box.max_x - box.min_x);
+    resizeY = 180.0 / (box.max_y - box.min_y);
     // const newLocal = layout.getNodePosition(1);
     // console.log("\""+newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)+"\"")
     var i = 0;
@@ -238,7 +251,7 @@ export default function createGraphScene(canvas) {
         if (node.data === undefined) {
           node.data = new Object()
         }
-        node.data.l = newLocal.x.toFixed(3) + "," + newLocal.y.toFixed(3)
+        node.data.l = newLocal.x.toFixed(3) * resizeX + "," + newLocal.y.toFixed(3) * resizeY
       })
       var dotContent = toDot(subgraph.graph)
       try {
@@ -262,13 +275,23 @@ export default function createGraphScene(canvas) {
 
   function name() {
     console.log("Shipping name...")
+    var box = layout.getGraphRect();
+    resizeX = 360.0 / (box.max_x - box.min_x);
+    resizeY = 180.0 / (box.max_y - box.min_y);
     var namesArray = [];
     // const newLocal = layout.getNodePosition(1);
     // console.log("\""+newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)+"\"")
     subgraphs.forEach(function (subgraph) {
       subgraph.graph.forEachNode(node => {
         var newLocal = layout.getNodePosition(node.id);
-        namesArray.push({ 'Name': node.data.label, 'x': newLocal.x.toFixed(3), 'y': newLocal.y.toFixed(3) })
+        if (node.data !== undefined) {
+          if (node.data.label === undefined) {
+            node.data.label = node.id.toString()
+          }
+          namesArray.push({ 'Name': node.data.label, 'x': newLocal.x.toFixed(3) * resizeX, 'y': newLocal.y.toFixed(3) * resizeY })
+        }
+
+
       })
       //  namesArray.sort((a, b) => a.Name < b.Name)
 
@@ -309,6 +332,41 @@ export default function createGraphScene(canvas) {
     } catch (error) {
       console.log("There was a problem adding posting")
     }
+  }
+
+  function voronoi() {
+    console.log("Voronoi ...")
+   // console.log(d3)
+    var hulls = [];
+    var box = layout.getGraphRect();
+    resizeX = 360.0 / (box.max_x - box.min_x);
+    resizeY = 180.0 / (box.max_y - box.min_y);
+
+
+    subgraphs.forEach(subgraph => {
+      var nodes = [];
+      subgraph.graph.forEachNode(node => {
+        var lay = layout.getNodePosition(node.id);
+        nodes.push([lay.x * resizeX, lay.y * resizeY])
+      })
+
+      hulls.push(d3.geoVoronoi(nodes).hull());
+    })
+
+    try {
+      fetch("http://127.0.0.1:3010/borders", {
+        method: "POST",
+        body: JSON.stringify(hulls),
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        }
+      }).then(function (response) {
+        console.log("Voronoi done")
+      });
+    } catch (error) {
+      console.log("There was a problem adding posting")
+    }
+    
   }
 
   function groupByName(strings) {

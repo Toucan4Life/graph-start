@@ -47,6 +47,9 @@ export default {
     },
     geojson(){
       this.scene.geojson();
+    },
+    voronoi(){
+      this.scene.voronoi();
     }
   },
 
@@ -62,7 +65,7 @@ export default {
 </script>
 
 <template>
-  <a href="#" @click.prevent='runLayout' class='btn-command'>Make {{stepCount}} layout steps</a>
+  <a href="#" @click.prevent='runLayout' class='btn-command'>Toggle simulation</a>
   <a href="#" @click.prevent='toggleLabel' class='btn-command'>Togle Label</a>
   <a href="#" @click.prevent='toggleLink' class='btn-command'>Togle Link</a>
   <a href="#" @click.prevent='louvain' class='btn-command'>Louvain</a>
@@ -75,6 +78,7 @@ export default {
   <a href="#" @click.prevent='ship' class='btn-command'>Ship it !</a>
   <a href="#" @click.prevent='name' class='btn-command'>Name it !</a>
   <a href="#" @click.prevent='geojson' class='btn-command'>GeoJson it !</a>
+  <a href="#" @click.prevent='voronoi' class='btn-command'>Voronoi it !</a>
 </template>
 
 <style>

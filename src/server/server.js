@@ -56,9 +56,9 @@ app.post("/names", (r, s) => {
   r.on('end', function () {
     try {
 
-      console.log("Writing " + r.headers.firstchar + '.names')
+      // console.log("Writing " + r.headers.firstchar + '.names')
       //const newLocal = JSON.parse(body);
-      fs.writeFileSync(join("v1", "names", r.headers.firstchar + '.json'), body.slice(0, -4));
+      fs.writeFileSync(join("v1", "names", r.headers.firstchar.toLowerCase() + '.json'), body.slice(0, -4));
       // file written successfully
     } catch (err) {
       console.error(err);
@@ -85,7 +85,7 @@ app.post("/geojson", (r, s) => {
 
   let mygeojson = { "type": "FeatureCollection", "features": [] }
   for (let point of pointsDot) {
-    let feature = { "type": "Feature", "geometry": { "type": "Point", "coordinates":point.data.l.slice(0, -1).split(",").map(str => (parseFloat(str)/100).toFixed(3))}, "properties": { "name": point.data.label } }
+    let feature = { "type": "Feature", "geometry": { "type": "Point", "coordinates": point.data.l.slice(0, -1).split(",").map(str => parseFloat(str)) }, "properties": { "name": point.data.label, "size": point.data.weight } }
     mygeojson.features.push(feature);
   }
   fs.writeFile('./v1/geojson/points.geojson', JSON.stringify(mygeojson), function (err) {
@@ -96,6 +96,35 @@ app.post("/geojson", (r, s) => {
 
   s.write("OK");
   s.end();
+})
+
+app.post("/borders", (r, s) => {
+  var body = "";
+  var i=0;
+  let mygeojson = { "type": "FeatureCollection", "features": [] }
+  r.on('readable', function () {
+    body += r.read();
+  });
+  r.on('end', function () {
+    try {
+      //console.log(body.slice(0, -4));
+      JSON.parse(body.slice(0, -4)).forEach(hull => {if (hull != null) {
+        let feature = { "type": "Feature","id":i, "geometry": hull, "properties":  {"fill": "#00529c"} }
+        mygeojson.features.push(feature);
+        i=i+1;
+      }})
+      fs.writeFile('./v1/borders.geojson', JSON.stringify(mygeojson), function (err) {
+        if (err) {
+          console.log(err);
+        }
+      })
+      // file written successfully
+    } catch (err) {
+      console.error(err);
+    }
+    s.write("OK");
+    s.end();
+  });
 })
 
 app.listen(port, () => {
