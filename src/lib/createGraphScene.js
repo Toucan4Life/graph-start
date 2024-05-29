@@ -10,6 +10,7 @@ import coarsen from 'ngraph.coarsen';
 import toDot from 'ngraph.todot';
 import axios from 'axios'
 import * as d3 from 'd3-geo-voronoi'
+import { capitalize } from 'vue';
 export default function createGraphScene(canvas) {
   let drawLinks = true;
   let drawLabels = true;
@@ -54,10 +55,7 @@ export default function createGraphScene(canvas) {
     coarsenGraph,
     reattachNode,
     cut,
-    ship,
-    name,
-    geojson,
-    voronoi
+    ship
   };
 
   function loadGraph(newGraph) {
@@ -241,113 +239,40 @@ export default function createGraphScene(canvas) {
     var box = layout.getGraphRect();
     resizeX = 360.0 / (box.max_x - box.min_x);
     resizeY = 180.0 / (box.max_y - box.min_y);
-    // const newLocal = layout.getNodePosition(1);
-    // console.log("\""+newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)+"\"")
-    var i = 0;
     subgraphs.forEach(function (subgraph) {
       subgraph.graph.forEachNode(node => {
 
         var newLocal = layout.getNodePosition(node.id);
         if (node.data === undefined) {
-          node.data = new Object()
+          node.data = new Object();
         }
-        node.data.l = newLocal.x.toFixed(3) * resizeX + "," + newLocal.y.toFixed(3) * resizeY
-      })
-      var dotContent = toDot(subgraph.graph)
-      try {
-        fetch("http://127.0.0.1:3010/", {
-          method: "POST",
-          body: dotContent,
-          headers: {
-            "Content-type": "application/json; charset=UTF-8",
-            "number": i
-          }
-        }).then(function (response) {
-          console.log("File sent")
-        });
-      } catch (error) {
-        console.log("There was a problem adding posting")
-      }
-      i = i + 1;
+        node.data.l = [newLocal.x.toFixed(3) * resizeX , newLocal.y.toFixed(3) * resizeY];
+      });
     })
+    graphs(subgraphs)
+    subgraphs.forEach(function (subgraph) {
+      subgraph.graph.forEachNode(node => {
+
+        var newLocal = layout.getNodePosition(node.id);
+        if (node.data === undefined) {
+          node.data = new Object();
+        }
+        node.data.l = [newLocal.x.toFixed(3) * resizeX , newLocal.y.toFixed(3) * resizeY];
+      });
+    })
+    name(subgraphs, groupByName)
+    geojson()
+    voronoi(subgraphs)
     console.log("Shippping done")
   }
 
-  function name() {
-    console.log("Shipping name...")
-    var box = layout.getGraphRect();
-    resizeX = 360.0 / (box.max_x - box.min_x);
-    resizeY = 180.0 / (box.max_y - box.min_y);
-    var namesArray = [];
-    // const newLocal = layout.getNodePosition(1);
-    // console.log("\""+newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)+"\"")
-    subgraphs.forEach(function (subgraph) {
-      subgraph.graph.forEachNode(node => {
-        var newLocal = layout.getNodePosition(node.id);
-        if (node.data !== undefined) {
-          if (node.data.label === undefined) {
-            node.data.label = node.id.toString()
-          }
-          namesArray.push({ 'Name': node.data.label, 'x': newLocal.x.toFixed(3) * resizeX, 'y': newLocal.y.toFixed(3) * resizeY })
-        }
-
-
-      })
-      //  namesArray.sort((a, b) => a.Name < b.Name)
-
-    })
-    var arrays = groupByName(namesArray)
-    arrays.forEach(gamelist => {
-      try {
-        fetch("http://127.0.0.1:3010/names", {
-          method: "POST",
-          body: JSON.stringify(gamelist.map(element => [element.Name, parseFloat(element.x), parseFloat(element.y)])),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8",
-            "firstChar": gamelist[0].Name[0]
-          }
-        }).then(function (response) {
-          console.log("File sent")
-        });
-      } catch (error) {
-        console.log("There was a problem adding posting")
-      }
-    })
-
-    console.log("Shippping name done")
-  }
-
-  function geojson() {
-    console.log("Geojsoning ...")
-    try {
-      fetch("http://127.0.0.1:3010/geojson", {
-        method: "POST",
-        body: "",
-        headers: {
-          "Content-type": "application/json; charset=UTF-8"
-        }
-      }).then(function (response) {
-        console.log("Geojsoning done")
-      });
-    } catch (error) {
-      console.log("There was a problem adding posting")
-    }
-  }
-
-  function voronoi() {
-    console.log("Voronoi ...")
-   // console.log(d3)
+  function voronoi(subgraphs) {
+    // console.log(d3)
     var hulls = [];
-    var box = layout.getGraphRect();
-    resizeX = 360.0 / (box.max_x - box.min_x);
-    resizeY = 180.0 / (box.max_y - box.min_y);
-
-
     subgraphs.forEach(subgraph => {
       var nodes = [];
       subgraph.graph.forEachNode(node => {
-        var lay = layout.getNodePosition(node.id);
-        nodes.push([lay.x * resizeX, lay.y * resizeY])
+        nodes.push(node.data.l)
       })
 
       hulls.push(d3.geoVoronoi(nodes).hull());
@@ -361,12 +286,11 @@ export default function createGraphScene(canvas) {
           "Content-type": "application/json; charset=UTF-8"
         }
       }).then(function (response) {
-        console.log("Voronoi done")
       });
     } catch (error) {
       console.log("There was a problem adding posting")
     }
-    
+
   }
 
   function groupByName(strings) {
@@ -516,6 +440,80 @@ export default function createGraphScene(canvas) {
 
     scene.dispose();
     bus.off('load-graph', loadGraph);
+  }
+}
+
+function name(subgraphs, groupByName) {
+
+  var namesArray = [];
+  // const newLocal = layout.getNodePosition(1);
+  // console.log("\""+newLocal.x.toFixed(3)+","+newLocal.y.toFixed(3)+"\"")
+  subgraphs.forEach(function (subgraph) {
+    subgraph.graph.forEachNode(node => {     
+      if (node.data !== undefined) {
+        if (node.data.label === undefined) {
+          node.data.label = node.id.toString();
+        }
+        var newLocal = node.data.l;
+        namesArray.push({ 'Name': node.data.label, 'x': newLocal[0], 'y': newLocal[1] });
+      }
+    });
+    //  namesArray.sort((a, b) => a.Name < b.Name)
+  });
+  var arrays = groupByName(namesArray);
+  arrays.forEach(gamelist => {
+    try {
+      fetch("http://127.0.0.1:3010/names", {
+        method: "POST",
+        body: JSON.stringify(gamelist.map(element => [element.Name, parseFloat(element.x), parseFloat(element.y)])),
+        headers: {
+          "Content-type": "application/json; charset=UTF-8",
+          "firstChar": gamelist[0].Name[0]
+        }
+      }).then(function (response) {
+      });
+    } catch (error) {
+      console.log("There was a problem adding posting");
+    }
+  });
+}
+
+function graphs(subgraphs) {
+  subgraphs.forEach(function (subgraph) {
+    subgraph.graph.forEachNode(node => {
+      var newLocal = node.data.l;
+      node.data.l = newLocal[0] + ","+ newLocal[1];
+    });
+  })
+
+  var t = subgraphs.map(graph=>toDot(graph.graph))
+  try {
+    fetch("http://127.0.0.1:3010/graphs", {
+      method: "POST",
+      body: JSON.stringify(t),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8",
+      }
+    }).then(function (response) {
+    });
+  } catch (error) {
+    console.log("There was a problem adding posting");
+  }
+ 
+}
+
+function geojson() {
+  try {
+    fetch("http://127.0.0.1:3010/geojson", {
+      method: "POST",
+      body: "",
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    }).then(function (response) {
+    });
+  } catch (error) {
+    console.log("There was a problem adding posting")
   }
 }
 

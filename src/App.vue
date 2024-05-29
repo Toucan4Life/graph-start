@@ -41,15 +41,6 @@ export default {
     },
     ship(){
       this.scene.ship();
-    },
-    name(){
-      this.scene.name();
-    },
-    geojson(){
-      this.scene.geojson();
-    },
-    voronoi(){
-      this.scene.voronoi();
     }
   },
 
@@ -76,9 +67,6 @@ export default {
   <a href="#" @click.prevent='cut' class='btn-command'>cut</a> 
 	<input v-model="threshold" placeholder="cut threshold" />
   <a href="#" @click.prevent='ship' class='btn-command'>Ship it !</a>
-  <a href="#" @click.prevent='name' class='btn-command'>Name it !</a>
-  <a href="#" @click.prevent='geojson' class='btn-command'>GeoJson it !</a>
-  <a href="#" @click.prevent='voronoi' class='btn-command'>Voronoi it !</a>
 </template>
 
 <style>
