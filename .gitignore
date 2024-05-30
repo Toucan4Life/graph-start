@@ -23,3 +23,5 @@ yarn-error.log*
 src/server/data
 package-lock.json
 src/server/package-lock.json
+src/server/data copy
+src/server/package-lock.json
