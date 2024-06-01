@@ -8,6 +8,8 @@ import createLayout from 'ngraph.forcelayout';
 import detectClusters from 'ngraph.louvain';
 import coarsen from 'ngraph.coarsen';
 import toDot from 'ngraph.todot';
+import createGraph from 'ngraph.graph';
+
 export default function createGraphScene(canvas) {
   let drawLinks = true;
   let drawLabels = true;
@@ -39,6 +41,8 @@ export default function createGraphScene(canvas) {
   var subgraphs = [];
   var resizeX = 0;
   var resizeY = 0;
+  var pinnedNdes = [];
+  var clusterGraph = new Object();
   loadGraph(getGraph());
   bus.on('load-graph', loadGraph);
 
@@ -52,7 +56,8 @@ export default function createGraphScene(canvas) {
     coarsenGraph,
     reattachNode,
     cut,
-    ship
+    ship,
+    pin
   };
 
   function loadGraph(newGraph) {
@@ -60,6 +65,7 @@ export default function createGraphScene(canvas) {
     nodeInSubgraph = new Object();
     linkToRemove = [];
     subgraphs = [];
+    clusterGraph = new Object();
     resizeX = 0;
     resizeY = 0;
     if (scene) {
@@ -107,35 +113,51 @@ export default function createGraphScene(canvas) {
     console.log("cutting done")
   }
 
-  function coarsenGraph() {
+  function coarsenGraph(interdist) {
     console.log("Coarsin...")
-    // if (clusters != undefined) {
-    //   const newLocal = coarsen(graph, clusters);
-    //   loadGraph(newLocal);
-    // }
 
-    //graph.forEachNode((node) => console.log("graph node: " + node.id))
-    var cgraph = coarsen(graph, clusters);
+    // console.log(toDot(graph))
+    clusterGraph = coarsen(graph, clusters);
+    //var subgraphs = coarsen.getSubgraphs(clusterGraph);
+    //clusterGraph.forEachNode(node => console.log(node))
+    console.log(interdist)
+    let layoutC = createLayout(clusterGraph, {
+      timeStep: 0.2,
+      springLength: 10,
+      springCoefficient: 0.8,
+      gravity: -12,
+      dragCoefficient: 0.9,
+    });
 
+    let i = 0;
 
-    coarsen.getSubgraphs(cgraph).forEach(function (subgraph) {
-      subgraphs.push(subgraph)
-      var p = [];
-      subgraph.graph.forEachNode(function (node) {
-        p.push(node.id);
-        //console.log(node);
-      });
-      nodeInSubgraph[subgraph.id] = p;
-    })
+    while (i < 100) {
+      layoutC.step()
+      console.log("stepping...")
+      i = i + 1;
+    }
+    var box = layoutC.getGraphRect();
+    var center = [(box.max_x + box.min_x) / 2, (box.max_y + box.min_y) / 2]
+    clusterGraph.forEachNode(cNode => {
+      var nodes = [];
+      cNode.data.forEach(n => {
+        var node = graph.getNode(n);
+        if (node.data === undefined) {
+          node.data = new Object()
+        }
+        if (node.data.weight === undefined) {
+          node.data.weight = 1
+        }
+        nodes.push(node)
+      })
 
-    cgraph.forEachLink((link) => {
-      if (link.toId != link.fromId) {
-        //console.log("link: " + x[link.fromId] + ' => ' + x[link.toId])
-        var bodies_from = layout.getBody(nodeInSubgraph[link.fromId][0]);
-        var bodies_to = layout.getBody(nodeInSubgraph[link.toId][0]);
-        addedSprings.push(layout.simulator.addSpring(bodies_from, bodies_to, 300, 0.8));
-      }
+      var chosen_node = nodes.reduce((seed, item) => { return (seed && seed.data.weight > item.data.weight) ? seed : item; }, null);
+      var graph_position = layoutC.getNodePosition(cNode.id);
 
+      layout.setNodePosition(chosen_node.id, (graph_position.x - center[0]) * interdist, (graph_position.y - center[1]) * interdist)
+
+      layout.pinNode(chosen_node, true)
+      pinnedNdes.push([chosen_node, (graph_position.x - center[0]) * interdist, (graph_position.y - center[1]) * interdist, cNode.data])
     })
 
     console.log("Coarsin done")
@@ -148,8 +170,8 @@ export default function createGraphScene(canvas) {
   function toggleLink() {
     drawLinks = !drawLinks;
   }
+
   function reattachNode(size) {
-    var linkToAdd = [];
     console.log("reattaching...")
     var froms = [];
     console.log(subgraphs)
@@ -177,7 +199,7 @@ export default function createGraphScene(canvas) {
         }
       }
       subgraphs = subgraphs.filter((item) => !froms.includes(item.id))
-      console.log(subgraphs)
+      //console.log(subgraphs)
       linkToAdd.forEach((link) => {
         if (link != null) {
           graph.addLink(link.fromId, link.toId, link.data)
@@ -191,39 +213,36 @@ export default function createGraphScene(canvas) {
     console.log("reattaching done")
   }
 
-  // function coarseOnce() {
-  //   //does not work because resulting graph is not same type as previous graph and we dont find link.ui property
-  //   console.log(clusters);
-  //   console.log(clusters != undefined);
-  //   if (clusters != undefined) {
-  //     if (!clusters.canCoarse()) { console.log('Cant coarse'); return }
-  //     console.log('coarsing baby');
-  //     graph = coarsen(graph, clusters);
-  //     clusters = detectClusters(graph);
-  //     recolorNode(graph, clusters, layout, getColor);
-  //   }
-  // }
-
   function separateClusters() {
     console.log("Separating...")
-    if (clusters != undefined) {
-      graph.forEachLink(link => {
-        if (link != undefined && clusters.getClass(link.fromId) != clusters.getClass(link.toId)) {
-          linkToRemove.push(link);
-        }
-
+    var tempGraph = createGraph();
+    var subgraphs = coarsen.getSubgraphs(clusterGraph);
+    subgraphs.forEach(subgraph => {
+      subgraph.graph.forEachNode(node => {
+        tempGraph.addNode(node.id, node.data)
       });
+      subgraph.graph.forEachLink(link => {
+        tempGraph.addLink(link.fromId, link.toId, link.data)
+      })
+    })
 
-      linkToRemove.forEach((link) => { graph.removeLink(link); });
-      scene.dispose();
-      scene = null
-      scene = initScene();
-      initUIElements(false);
-    }
+    loadGraph(tempGraph)
+
+    pinnedNdes.forEach(node => {
+      //layout.setNodePosition(node[0].id, node[1], node[2])
+      node[3].forEach(nodeid => layout.setNodePosition(nodeid, node[1], node[2]))
+      //layout.pinNode(node[0], true)
+    })
 
     console.log("Separating done")
   }
 
+  function pin() {
+    pinnedNdes.forEach(node => {
+      layout.pinNode(node[0], !layout.isNodePinned(node[0]))
+    })
+
+  }
   function louvain() {
     console.log("Louvain...")
     clusters = detectClusters(graph);

@@ -72,7 +72,7 @@ function writeNames(subgraphs, groupByName) {
         if (node.data.label === undefined) {
           node.data.label = node.id.toString();
         }
-        var newLocal = node.data.l;
+        var newLocal = node.data.l.split(",");
         namesArray.push({ 'Name': node.data.label, 'x': newLocal[0], 'y': newLocal[1] });
       }
     });

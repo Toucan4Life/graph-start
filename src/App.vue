@@ -10,7 +10,8 @@ export default {
     return {
       message: '',
       stepCount: 2000,
-      treshold:0
+      treshold:0,
+      interdist:6
     }
   },
 
@@ -31,7 +32,7 @@ export default {
       this.scene.separateClusters();
     },
     coarsenGraph(){
-      this.scene.coarsenGraph();
+      this.scene.coarsenGraph(this.interdist);
     },
     reattachNode(){
       this.scene.reattachNode(this.message);
@@ -41,6 +42,9 @@ export default {
     },
     ship(){
       this.scene.ship();
+    },
+    pin(){
+      this.scene.pin();
     }
   },
 
@@ -57,11 +61,13 @@ export default {
 
 <template>
   <a href="#" @click.prevent='runLayout' class='btn-command'>Toggle simulation</a>
-  <a href="#" @click.prevent='toggleLabel' class='btn-command'>Togle Label</a>
-  <a href="#" @click.prevent='toggleLink' class='btn-command'>Togle Link</a>
+  <a href="#" @click.prevent='toggleLabel' class='btn-command'>Toggle Label</a>
+  <a href="#" @click.prevent='toggleLink' class='btn-command'>Toggle Link</a>
   <a href="#" @click.prevent='louvain' class='btn-command'>Louvain</a>
   <a href="#" @click.prevent='coarsenGraph' class='btn-command'>Coarsen</a>
+	<input v-model="interdist" placeholder="internode distance" />
   <a href="#" @click.prevent='separateClusters' class='btn-command'>Separate clusters</a>
+  <a href="#" @click.prevent='pin' class='btn-command'>Toggle pin clusters</a>
   <a href="#" @click.prevent='reattachNode' class='btn-command'>reattach nodes</a> 
 	<input v-model="message" placeholder="reattach node below count:" />
   <a href="#" @click.prevent='cut' class='btn-command'>cut</a> 
