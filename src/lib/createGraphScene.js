@@ -43,6 +43,7 @@ export default function createGraphScene(canvas) {
   var resizeY = 0;
   var pinnedNdes = [];
   var clusterGraph = new Object();
+  var originalGraph;
   loadGraph(getGraph());
   bus.on('load-graph', loadGraph);
 
@@ -62,9 +63,9 @@ export default function createGraphScene(canvas) {
 
   function loadGraph(newGraph) {
     addedSprings = [];
-    nodeInSubgraph = new Object();
+    // nodeInSubgraph = new Object();
     linkToRemove = [];
-    subgraphs = [];
+    // subgraphs = [];
     clusterGraph = new Object();
     resizeX = 0;
     resizeY = 0;
@@ -117,10 +118,11 @@ export default function createGraphScene(canvas) {
     console.log("Coarsin...")
 
     // console.log(toDot(graph))
+    originalGraph = graph;
     clusterGraph = coarsen(graph, clusters);
     //var subgraphs = coarsen.getSubgraphs(clusterGraph);
     //clusterGraph.forEachNode(node => console.log(node))
-    console.log(interdist)
+    // console.log(interdist)
     let layoutC = createLayout(clusterGraph, {
       timeStep: 0.2,
       springLength: 10,
@@ -133,7 +135,7 @@ export default function createGraphScene(canvas) {
 
     while (i < 100) {
       layoutC.step()
-      console.log("stepping...")
+      // console.log("stepping...")
       i = i + 1;
     }
     var box = layoutC.getGraphRect();
@@ -173,21 +175,26 @@ export default function createGraphScene(canvas) {
 
   function reattachNode(size) {
     console.log("reattaching...")
+    var linkToAdd = [];
     var froms = [];
-    console.log(subgraphs)
+    //console.log(subgraphs)
     if (clusters != undefined) {
       for (const [key, value] of Object.entries(nodeInSubgraph)) {
         if (value.length <= size) {
-          //console.log(key, value);
-          //console.log(addedSprings[0]);
-          addedSprings.filter(spring => value.includes(spring.from.id) || value.includes(spring.to.id)).forEach(spring => layout.simulator.removeSpring(spring))
-          const newLocal_1 = linkToRemove.filter(link => clusters.getClass(link.fromId) == key || clusters.getClass(link.toId) == key);
-          const newLocal = newLocal_1.reduce((seed, item) => { return (seed && seed.data.weight > item.data.weight) ? seed : item; }, null);
-          //console.log("link found " + newLocal.toId.toString() + " " + newLocal.fromId.toString() + " " + newLocal.data.weight)
-          var graphFrom = subgraphs.find(subgraph => subgraph.id == key);
-          froms.push(graphFrom.id)
+          var links = [];
+          // console.log("deleting subgraph")
+          // console.log(key)
+          value.forEach(nodeid => {
+            var node = originalGraph.getNode(nodeid)
+            links = links.concat(node.links)
+          })
+
+          links = links.filter(link => clusters.getClass(link.fromId) != clusters.getClass(link.toId));
+          var newLocal = links.reduce((seed, item) => { return (seed && seed.data.weight > item.data.weight) ? seed : item; }, null);
+          linkToAdd.push(newLocal);
+          froms.push(parseInt(key))
           if (newLocal != null) {
-            linkToAdd.push(newLocal)
+            var graphFrom = subgraphs.find(subgraph => subgraph.id == key);
             var clusterTo = clusters.getClass(newLocal.fromId) == key ? clusters.getClass(newLocal.toId) : clusters.getClass(newLocal.fromId)
             //console.log("need to merge cluster " + key + " into cluster " + clusterTo);
             var graphTo = subgraphs.find(subgraph => subgraph.id == clusterTo);
@@ -195,11 +202,23 @@ export default function createGraphScene(canvas) {
             graphFrom.graph.forEachLink(link => graphTo.graph.addLink(link.fromId, link.toId, link.data))
             graphTo.graph.addLink(newLocal.fromId, newLocal.toId, newLocal.data)
             subgraphs.forEach((item, i) => { if (item.id == graphTo.id) subgraphs[i] = graphTo; });
+          
+            var nodeToId = clusters.getClass(newLocal.fromId) == key ? newLocal.toId : newLocal.fromId           
+            var position = layout.getNodePosition(nodeToId)
+
+            value.forEach(nodeid => {
+              //console.log("setting node : " +nodeid +"to position of node : " + nodeToId)
+              layout.setNodePosition(nodeid, position.x, position.y)})
           }
         }
       }
+
+      //console.log(froms)
       subgraphs = subgraphs.filter((item) => !froms.includes(item.id))
-      //console.log(subgraphs)
+      // console.log("resulting subgraph")
+      // console.log(subgraphs)
+      // console.log(linkToAdd)
+
       linkToAdd.forEach((link) => {
         if (link != null) {
           graph.addLink(link.fromId, link.toId, link.data)
@@ -212,11 +231,11 @@ export default function createGraphScene(canvas) {
     }
     console.log("reattaching done")
   }
-
+  
   function separateClusters() {
     console.log("Separating...")
     var tempGraph = createGraph();
-    var subgraphs = coarsen.getSubgraphs(clusterGraph);
+    subgraphs = coarsen.getSubgraphs(clusterGraph);
     subgraphs.forEach(subgraph => {
       subgraph.graph.forEachNode(node => {
         tempGraph.addNode(node.id, node.data)
@@ -224,6 +243,11 @@ export default function createGraphScene(canvas) {
       subgraph.graph.forEachLink(link => {
         tempGraph.addLink(link.fromId, link.toId, link.data)
       })
+      var p = [];
+      subgraph.graph.forEachNode(function (node) {
+        p.push(node.id);
+      });
+      nodeInSubgraph[subgraph.id] = p;
     })
 
     loadGraph(tempGraph)
