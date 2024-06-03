@@ -70,7 +70,7 @@ export default {
   <a href="#" @click.prevent='pin' class='btn-command'>Toggle pin clusters</a>
   <a href="#" @click.prevent='reattachNode' class='btn-command'>reattach nodes</a> 
 	<input v-model="message" placeholder="reattach node below count:" />
-  <a href="#" @click.prevent='cut' class='btn-command'>cut</a> 
+  <a href="#" @click.prevent='cut' class='btn-command'>cut (%)</a> 
 	<input v-model="threshold" placeholder="cut threshold" />
   <a href="#" @click.prevent='ship' class='btn-command'>Ship it !</a>
 </template>

@@ -7,6 +7,7 @@ import path from "path"
 import fromDot from 'ngraph.fromdot';
 import toDot from 'ngraph.todot';
 import * as d3 from 'd3-geo-voronoi'
+import * as d from 'd3-delaunay'
 
 const app = express()
 const port = 3010
@@ -36,12 +37,14 @@ app.post("/ship", (r, s) => {
     body += r.read();
   });
   r.on('end', function () {
+    console.log("starting")
     var subgraphsjson = JSON.parse(body.slice(0, -4));
     var subgraphs = subgraphsjson.map(subgraphjson => fromDot(subgraphjson))
     writeGraphs(subgraphs);
     writeNames(subgraphs, groupByName);
     writeGeojson();
     writeVoronoi(subgraphs);
+    console.log("done")
     s.write("OK");
     s.end();
   });
@@ -73,7 +76,7 @@ function writeNames(subgraphs, groupByName) {
           node.data.label = node.id.toString();
         }
         var newLocal = node.data.l.split(",");
-        namesArray.push({ 'Name': node.data.label, 'x': newLocal[0], 'y': newLocal[1] });
+        namesArray.push({ 'Name': node.data.label.toString(), 'x': newLocal[0], 'y': newLocal[1] });
       }
     });
   });
@@ -85,25 +88,40 @@ function writeNames(subgraphs, groupByName) {
 }
 
 function writeVoronoi(subgraphs) {
-  var i = 0;
   let mygeojson = { "type": "FeatureCollection", "features": [] }
-  var hulls = [];
+  var chosenNodes = [];
   subgraphs.forEach(subgraph => {
     var nodes = [];
     subgraph.forEachNode(node => {
-      nodes.push(node.data.l.split(',').map(coord => parseFloat(coord)))
+      nodes.push(node)
     })
+    chosenNodes.push(nodes.reduce((seed, item) => {
+      return (seed && seed.data.weight > item.data.weight) ? seed : item;
+    }, null));
 
-    hulls.push(d3.geoVoronoi(nodes).hull());
   })
 
-  hulls.forEach(hull => {
-    if (hull != null) {
-      let feature = { "type": "Feature", "id": i, "geometry": hull, "properties": { "fill": "#00529c" } }
-      mygeojson.features.push(feature);
-      i = i + 1;
+  const newLocal = chosenNodes.map(node => node.data.l.split(',').map(coord => parseFloat(parseFloat(coord).toFixed(3))));
+  console.log(JSON.stringify(newLocal))
+
+  const delaunay = d.Delaunay.from(newLocal);
+  const voronoi = delaunay.voronoi([-45, -45, 45, 45]);
+
+  var test = [...voronoi.cellPolygons()].map(function (point) {
+    return {
+      type: "Feature",
+      geometry: {
+        "type": "Polygon",
+        "coordinates": [point]
+      },
+      properties: {
+        fill: getRandomColor()
+      }
     }
   })
+
+  mygeojson.features = test;
+
   fs.writeFileSync('./data/v1/borders.geojson', JSON.stringify(mygeojson), function (err) {
     if (err) {
       console.log(err);
@@ -147,7 +165,16 @@ function groupByName(strings) {
   strings.forEach(string => {
     // Get the first character of the current string
     //console.log(string)
-    const firstChar = string.Name.charAt(0).toLowerCase();
+    var firstChar = ''
+
+    try {
+      if (string.Name === undefined) {
+        console.error("Name not found :" + JSON.stringify(string));
+      }
+      firstChar = string.Name.charAt(0).toLowerCase();
+    } catch (error) {
+      console.error("Name not found :" + JSON.stringify(string));
+    }
 
     // If the group for this character doesn't exist, create it
     if (!groups[firstChar]) {
@@ -162,4 +189,12 @@ function groupByName(strings) {
   const result = Object.values(groups);
 
   return result;
+}
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
 }

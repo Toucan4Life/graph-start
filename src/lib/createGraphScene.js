@@ -98,19 +98,63 @@ export default function createGraphScene(canvas) {
     }
   }
 
-  function cut(threshold) {
+  function cut(quantileNumber) {
+    // sort array ascending
+    const asc = arr => arr.sort((a, b) => a - b);
+
+    const quantile = (arr, q) => {
+      const sorted = asc(arr);
+      const pos = (sorted.length - 1) * q;
+      const base = Math.floor(pos);
+      const rest = pos - base;
+      if (sorted[base + 1] !== undefined) {
+        return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+      } else {
+        return sorted[base];
+      }
+    };
     console.log("cutting...")
     var linkToRemovelocal = []
+
+    // subgraphs.forEach(subgraph => {
+    //   var significance = []
+    //   subgraph.graph.forEachLink(link => {
+    //     //  console.log(link);
+    //     significance.push(link.data.significance)
+    //   })
+    //  // console.log(significance)
+    //   var threshold = quantile(significance, parseFloat(quantileNumber) / 100)
+    //   //console.log(threshold)
+    //   subgraph.graph.forEachLink(link => {
+    //     if (link.data.significance < threshold) {
+    //       linkToRemovelocal.push(link)
+    //     }
+    //   })
+
+    // })
+
+    var significance = []
     graph.forEachLink(link => {
-      if (link.data.weight < threshold
-        //&& graph.getLinks(link.fromId).some(links=> links.data.weight > link.data.weight) 
-        //&& graph.getLinks(link.toId).some(links=> links.data.weight > link.data.weight)
-      ) {
-        link.ui.color = 0x000000
-        //linkToRemovelocal.push(link)
+    //  console.log(link);
+      significance.push(link.data.significance)
+    })
+    //console.log(significance)
+    var threshold = quantile(significance, parseFloat(quantileNumber) / 100)
+    //console.log(threshold)
+    graph.forEachLink(link => {
+      if (link.data.significance < threshold) {
+        linkToRemovelocal.push(link)
       }
     })
-    //linkToRemovelocal.forEach(link => graph.removeLink(link))
+
+
+    console.log(linkToRemovelocal)
+    linkToRemovelocal.forEach(link => { graph.removeLink(link) })
+
+    scene.dispose();
+    scene = null
+    scene = initScene();
+    initUIElements(false);
     console.log("cutting done")
   }
 
@@ -202,13 +246,14 @@ export default function createGraphScene(canvas) {
             graphFrom.graph.forEachLink(link => graphTo.graph.addLink(link.fromId, link.toId, link.data))
             graphTo.graph.addLink(newLocal.fromId, newLocal.toId, newLocal.data)
             subgraphs.forEach((item, i) => { if (item.id == graphTo.id) subgraphs[i] = graphTo; });
-          
-            var nodeToId = clusters.getClass(newLocal.fromId) == key ? newLocal.toId : newLocal.fromId           
+
+            var nodeToId = clusters.getClass(newLocal.fromId) == key ? newLocal.toId : newLocal.fromId
             var position = layout.getNodePosition(nodeToId)
 
             value.forEach(nodeid => {
               //console.log("setting node : " +nodeid +"to position of node : " + nodeToId)
-              layout.setNodePosition(nodeid, position.x, position.y)})
+              layout.setNodePosition(nodeid, position.x, position.y)
+            })
           }
         }
       }
@@ -231,7 +276,7 @@ export default function createGraphScene(canvas) {
     }
     console.log("reattaching done")
   }
-  
+
   function separateClusters() {
     console.log("Separating...")
     var tempGraph = createGraph();
@@ -277,8 +322,8 @@ export default function createGraphScene(canvas) {
   function ship() {
     console.log("Shipping...")
     var box = layout.getGraphRect();
-    resizeX = 360.0 / (box.max_x - box.min_x);
-    resizeY = 180.0 / (box.max_y - box.min_y);
+    resizeX = 90.0 / (box.max_x - box.min_x);
+    resizeY = 90.0 / (box.max_y - box.min_y);
     subgraphs.forEach(function (subgraph) {
       subgraph.graph.forEachNode(node => {
 
@@ -286,7 +331,7 @@ export default function createGraphScene(canvas) {
         if (node.data === undefined) {
           node.data = new Object();
         }
-        node.data.l = newLocal.x.toFixed(3) * resizeX + "," + newLocal.y.toFixed(3) * resizeY;
+        node.data.l = (newLocal.x * resizeX).toFixed(3) + "," + (newLocal.y * resizeY).toFixed(3);
       });
     })
     var t = subgraphs.map(graph => toDot(graph.graph))
