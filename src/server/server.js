@@ -5,9 +5,11 @@ import fs from "fs";
 import serveIndex from "serve-index";
 import path from "path"
 import fromDot from 'ngraph.fromdot';
+import createGraph from 'ngraph.graph';
 import toDot from 'ngraph.todot';
 import * as d3 from 'd3-geo-voronoi'
 import * as d from 'd3-delaunay'
+import { parse } from 'csv-parse/sync';
 
 const app = express()
 const port = 3010
@@ -40,6 +42,8 @@ app.post("/ship", (r, s) => {
     console.log("starting")
     var subgraphsjson = JSON.parse(body.slice(0, -4));
     var subgraphs = subgraphsjson.map(subgraphjson => fromDot(subgraphjson))
+    subgraphs = changeIdToLabel(subgraphs)
+    subgraphs = enrichGraphs(subgraphs)
     writeGraphs(subgraphs);
     writeNames(subgraphs, groupByName);
     writeGeojson();
@@ -57,6 +61,10 @@ app.listen(port, () => {
 function writeGraphs(subgraphs) {
   var i = 0;
   subgraphs.forEach(subgraph => {
+    // subgraph.forEachLink(link => {
+    //   link.data.fromId = subgraph.getNode(link.fromId).data.label
+    //   link.data.toId = subgraph.getNode(link.toId).data.label
+    // })
     try {
       fs.writeFileSync(join("data", "v1", "graphs", i + '.dot'), toDot(subgraph));
       // file written successfully
@@ -76,14 +84,14 @@ function writeNames(subgraphs, groupByName) {
           node.data.label = node.id.toString();
         }
         var newLocal = node.data.l.split(",");
-        namesArray.push({ 'Name': node.data.label.toString(), 'x': newLocal[0], 'y': newLocal[1] });
+        namesArray.push({ 'Name': node.data.label.toString(), 'x': newLocal[0], 'y': newLocal[1], 'id' : node.data.id });
       }
     });
   });
   var arrays = groupByName(namesArray);
   arrays.forEach(gamelist => {
     fs.writeFileSync(join("data", "v1", "names", gamelist[0].Name[0].toLowerCase() + '.json'),
-      JSON.stringify(gamelist.map(element => [element.Name, parseFloat(element.x), parseFloat(element.y)])));
+      JSON.stringify(gamelist.map(element => [element.Name, parseFloat(element.x), parseFloat(element.y), element.id])));
   });
 }
 
@@ -101,8 +109,8 @@ function writeVoronoi(subgraphs) {
 
   })
 
-  const newLocal = chosenNodes.map(node => node.data.l.split(',').map(coord => parseFloat(parseFloat(coord).toFixed(3))));
-  console.log(JSON.stringify(newLocal))
+  const newLocal = chosenNodes.map(node => node.data.l.split(',').map(coord => parseFloat(coord)));
+  //console.log(JSON.stringify(newLocal))
 
   const delaunay = d.Delaunay.from(newLocal);
   const voronoi = delaunay.voronoi([-45, -45, 45, 45]);
@@ -110,6 +118,7 @@ function writeVoronoi(subgraphs) {
   var test = [...voronoi.cellPolygons()].map(function (point) {
     return {
       type: "Feature",
+      id: newLocal.map(node => voronoi.contains(point.index, node[0], node[1])).findIndex(element => element),
       geometry: {
         "type": "Polygon",
         "coordinates": [point]
@@ -133,19 +142,29 @@ function writeGeojson() {
   const directoryPath = './data/v1/graphs';
   var pointsDot = [];
   let filenames = fs.readdirSync(directoryPath)
-
   filenames.forEach(file => {
     const filePath = path.join(directoryPath, file);
 
     var t = fromDot(fs.readFileSync(filePath).toString())
     t.forEachNode(node => {
-      pointsDot.push(node);
+      pointsDot.push([parseInt(file.slice(0, -4)),node]);
     })
   });
 
   let mygeojson = { "type": "FeatureCollection", "features": [] }
   for (let point of pointsDot) {
-    let feature = { "type": "Feature", "geometry": { "type": "Point", "coordinates": point.data.l.slice(0, -1).split(",").map(str => parseFloat(str)) }, "properties": { "name": point.data.label, "size": point.data.weight } }
+    let feature = {
+      "type": "Feature", "geometry": { "type": "Point", "coordinates": point[1].data.l.slice(0, -1).split(",").map(str => parseFloat(str)) },
+      "properties": {
+        "label": point[1].data.label,
+        "size": point[1].data.size,
+        "ratings": point[1].data.rating,
+        "complexity": point[1].data.complexity,
+        "id":point[1].data.id,
+        "parent":point[0]
+      }
+    }
+
     mygeojson.features.push(feature);
   }
   fs.writeFileSync('./data/v1/geojson/points.geojson', JSON.stringify(mygeojson), function (err) {
@@ -191,10 +210,54 @@ function groupByName(strings) {
   return result;
 }
 function getRandomColor() {
-  var letters = '0123456789ABCDEF';
-  var color = '#';
-  for (var i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
+  var colors = ["#516ebc","#153477","#00529c","#37009c"];
+
+  return colors[Math.floor(Math.random() * 4)];
+}
+
+function enrichGraphs(subgraphs) {
+  var input = fs.readFileSync('./bgg_GameItem.csv', 'utf8');
+
+  var records = parse(input, {
+    columns: true,
+    skip_empty_lines: true
+  });
+  let map = new Map(records.map(key => [key["bgg_id"], key]));
+
+
+  subgraphs.forEach(subgraph => subgraph.forEachNode(node => {
+    var row = map.get(node.data.id.toString())
+    node.data.size = (row["num_votes"] / 1000) + 20,
+      node.data.rating = row["avg_rating"],
+      node.data.complexity = row["complexity"]
+  }))
+
+
+  return subgraphs
+}
+
+function changeIdToLabel(subgraphs) {
+  var input = fs.readFileSync('./bgg_GameItem.csv', 'utf8');
+
+  var records = parse(input, {
+    columns: true,
+    skip_empty_lines: true
+  });
+  let map = new Map(records.map(key => [key["bgg_id"], key]));
+
+
+  return subgraphs.map(subgraph => {
+    var newgraph = createGraph()
+    subgraph.forEachNode(node => {
+      node.data.id = node.id
+      newgraph.addNode(map.get(node.id.toString())["name"], node.data)
+    })
+
+    subgraph.forEachLink(link => {
+      newgraph.addLink(map.get(link.fromId.toString())["name"], map.get(link.toId.toString())["name"], link.data)
+    })
+
+    return newgraph
+  })
+
 }
