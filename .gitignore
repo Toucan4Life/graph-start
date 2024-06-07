@@ -20,7 +20,6 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw*
-src/server/data
 package-lock.json
 src/server/package-lock.json
 src/server/data copy
