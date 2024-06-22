@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "axios": "^1.6.8",
+    "buffer-split": "^1.0.0",
     "d3-geo-voronoi": "^2.1.0",
     "miserables": "^2.0.0",
     "ngraph.coarsen": "^1.5.0",

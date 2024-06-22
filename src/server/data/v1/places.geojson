@@ -1,0 +1,165 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -38.708,
+          6.67
+        ]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "Escape Game",
+        "labelId": "dckrz",
+        "ownerId": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -36.991,
+          -9.216
+        ]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "Collectible Card Game",
+        "labelId": "tlu8o",
+        "ownerId": 11
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -21.235,
+          -21.719
+        ]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "Miniatures",
+        "labelId": "pbpim",
+        "ownerId": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.594,
+          4.557
+        ]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "WarGames",
+        "labelId": "p7rho",
+        "ownerId": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          9.256,
+          -17.521
+        ]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "1990s - 2010s",
+        "labelId": "cy7h0",
+        "ownerId": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          29.523,
+          32.974
+        ]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Game of your childhood",
+        "labelId": "7dlnm",
+        "ownerId": 8
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.117,
+          33.688
+        ]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "Kids",
+        "labelId": "fmz73",
+        "ownerId": 10
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -24.604,
+          26.239
+        ]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "Coop Underdog",
+        "labelId": "e8y5d",
+        "ownerId": 9
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.982,
+          7.841
+        ]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Popular",
+        "labelId": "xyq6p",
+        "ownerId": 4
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.981,
+          12.556
+        ]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "2010 - Present",
+        "labelId": "7xkld",
+        "ownerId": 0
+      }
+    }
+  ]
+}

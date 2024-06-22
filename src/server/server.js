@@ -114,8 +114,12 @@ function writeVoronoi(subgraphs) {
 
   const delaunay = d.Delaunay.from(newLocal);
   const voronoi = delaunay.voronoi([-45, -45, 45, 45]);
-
+ const neigborColor=[];
   var test = [...voronoi.cellPolygons()].map(function (point) {
+    var neighbor = [...voronoi.neighbors(point.index)];
+    var excludedColors = neigborColor.filter(t => neighbor.includes(t[0])).map(t => t[1]);
+    var color = getRandomColor(excludedColors);
+    neigborColor.push([point.index,color ]);
     return {
       type: "Feature",
       id: newLocal.map(node => voronoi.contains(point.index, node[0], node[1])).findIndex(element => element),
@@ -124,7 +128,7 @@ function writeVoronoi(subgraphs) {
         "coordinates": [point]
       },
       properties: {
-        fill: getRandomColor()
+        fill: color
       }
     }
   })
@@ -160,7 +164,18 @@ function writeGeojson() {
         "size": point[1].data.size,
         "ratings": point[1].data.rating,
         "complexity": point[1].data.complexity,
-        "id":point[1].data.id,
+        "min_players": point[1].data.min_players,
+        "max_players": point[1].data.max_players,
+        "min_players_rec": point[1].data.min_players_rec,
+        "max_players_rec": point[1].data.max_players_rec,
+        "min_players_best": point[1].data.min_players_best,
+        "max_players_best": point[1].data.max_players_best,
+        "min_time": point[1].data.min_time,
+        "max_time": point[1].data.max_time,
+        "category": point[1].data.category,
+        "mechanic": point[1].data.mechanic,
+        "bayes_rating": point[1].data.bayes_rating,
+        "id":point[1].data.id,  
         "parent":point[0]
       }
     }
@@ -209,10 +224,10 @@ function groupByName(strings) {
 
   return result;
 }
-function getRandomColor() {
-  var colors = ["#516ebc","#153477","#00529c","#37009c"];
+function getRandomColor(excludedColors) {
+  var colors = ["#516ebc","#153477","#00529c","#37009c"].filter(x => !excludedColors.includes(x));
 
-  return colors[Math.floor(Math.random() * 4)];
+  return colors[Math.floor(Math.random() * colors.length)];
 }
 
 function enrichGraphs(subgraphs) {
@@ -227,9 +242,20 @@ function enrichGraphs(subgraphs) {
 
   subgraphs.forEach(subgraph => subgraph.forEachNode(node => {
     var row = map.get(node.data.id.toString())
-    node.data.size = (row["num_votes"] / 1000) + 20,
-      node.data.rating = row["avg_rating"],
-      node.data.complexity = row["complexity"]
+    node.data.size = row["num_votes"],
+    node.data.rating = row["avg_rating"],
+    node.data.complexity = row["complexity"],
+    node.data.min_players = row["min_players"],
+    node.data.max_players = row["max_players"],
+    node.data.min_players_rec = row["min_players_rec"],
+    node.data.max_players_rec = row["max_players_rec"],
+    node.data.min_players_best = row["min_players_best"],
+    node.data.max_players_best = row["max_players_best"],
+    node.data.min_time = row["min_time"],
+    node.data.max_time = row["max_time"],
+    node.data.category = row["category"],
+    node.data.mechanic = row["mechanic"],
+    node.data.bayes_rating = row["bayes_rating"]      
   }))
 
 

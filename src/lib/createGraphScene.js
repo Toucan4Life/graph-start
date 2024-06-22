@@ -135,7 +135,7 @@ export default function createGraphScene(canvas) {
 
     var significance = []
     graph.forEachLink(link => {
-    //  console.log(link);
+      //  console.log(link);
       significance.push(link.data.significance)
     })
     //console.log(significance)
@@ -315,6 +315,7 @@ export default function createGraphScene(canvas) {
   function louvain() {
     console.log("Louvain...")
     clusters = detectClusters(graph);
+   // console.log(JSON.stringify(clusters))
     recolorNode(graph, clusters, layout, getColor);
     console.log("Louvain done")
   }
@@ -351,6 +352,7 @@ export default function createGraphScene(canvas) {
   }
 
   function getColor(id) {
+    //console.log(id)
     var idx = idToIndex[id];
     if (idx === undefined) {
       idx = idToIndex[id] = lastUsed;
@@ -476,6 +478,7 @@ export default function createGraphScene(canvas) {
 }
 
 function recolorNode(graph, clusters, layout, getColor) {
+  var b = []
   graph.forEachNode(node => {
     var currentClass = clusters.getClass(node.id);
     var point = layout.getNodePosition(node.id);
@@ -486,7 +489,9 @@ function recolorNode(graph, clusters, layout, getColor) {
       if (!node.data) node.data = {};
       node.data.size = size;
     }
-
+    b.push(currentClass)
     node.ui = { size, position: [point.x, point.y, point.z || 0], color: getColor(currentClass) };
   });
+  let uniqueItems = [...new Set(b)]
+  console.log(JSON.stringify(uniqueItems))
 }
