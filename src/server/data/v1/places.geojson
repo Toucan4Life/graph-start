@@ -92,7 +92,7 @@
       },
       "properties": {
         "symbolzoom": 5,
-        "name": "Game of your childhood",
+        "name": "Games of your childhood",
         "labelId": "7dlnm",
         "ownerId": 8
       }
@@ -124,7 +124,7 @@
       },
       "properties": {
         "symbolzoom": 4,
-        "name": "Coop Underdog",
+        "name": "Cooperative adventure",
         "labelId": "e8y5d",
         "ownerId": 9
       }
@@ -156,9 +156,41 @@
       },
       "properties": {
         "symbolzoom": 6,
-        "name": "2010 - Present",
+        "name": "2010 - Now",
         "labelId": "7xkld",
         "ownerId": 0
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.082,
+          33.567
+        ]
+      },
+      "properties": {
+        "symbolzoom": 3,
+        "name": "Solo",
+        "labelId": "ctdxi",
+        "ownerId": 7
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.243,
+          -23.095
+        ]
+      },
+      "properties": {
+        "symbolzoom": 3,
+        "name": "Family",
+        "labelId": "ezp96",
+        "ownerId": 6
       }
     }
   ]
