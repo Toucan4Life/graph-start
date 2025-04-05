@@ -5,9 +5,8 @@ import fs from "fs";
 import serveIndex from "serve-index";
 import path from "path"
 import fromDot from 'ngraph.fromdot';
-import createGraph from 'ngraph.graph';
+import createGraph, { Graph, Node } from 'ngraph.graph';
 import toDot from 'ngraph.todot';
-import * as d3 from 'd3-geo-voronoi'
 import * as d from 'd3-delaunay'
 import { parse } from 'csv-parse/sync';
 
@@ -29,7 +28,7 @@ var htmlPath = path.join(__dirname, 'data');
 app.use('/data', serveIndex(htmlPath));
 app.use('/data', express.static(htmlPath));
 
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.send('Hello World!')
 })
 
@@ -41,7 +40,7 @@ app.post("/ship", (r, s) => {
   r.on('end', function () {
     console.log("starting")
     var subgraphsjson = JSON.parse(body.slice(0, -4));
-    var subgraphs = subgraphsjson.map(subgraphjson => fromDot(subgraphjson))
+    var subgraphs: Graph<any, any>[] = subgraphsjson.map((subgraphjson: string) => fromDot(subgraphjson))
     subgraphs = changeIdToLabel(subgraphs)
     subgraphs = enrichGraphs(subgraphs)
     writeGraphs(subgraphs);
@@ -58,7 +57,7 @@ app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
 
-function writeGraphs(subgraphs) {
+function writeGraphs(subgraphs: Graph<NodeData, LinkData>[]) {
   var i = 0;
   subgraphs.forEach(subgraph => {
     // subgraph.forEachLink(link => {
@@ -75,8 +74,9 @@ function writeGraphs(subgraphs) {
   });
 }
 
-function writeNames(subgraphs, groupByName) {
-  var namesArray = [];
+
+function writeNames(subgraphs: Graph<NodeData, LinkData>[], groupByName: { (strings: Game[]): Game[][]; }) {
+  var namesArray: Game[] = [];
   subgraphs.forEach(function (subgraph) {
     subgraph.forEachNode(node => {
       if (node.data !== undefined) {
@@ -84,7 +84,7 @@ function writeNames(subgraphs, groupByName) {
           node.data.label = node.id.toString();
         }
         var newLocal = node.data.l.split(",");
-        namesArray.push({ 'Name': node.data.label.toString(), 'x': newLocal[0], 'y': newLocal[1], 'id' : node.data.id });
+        namesArray.push({ 'Name': node.data.label.toString(), 'x': newLocal[0], 'y': newLocal[1], 'id': node.data.id });
       }
     });
   });
@@ -95,37 +95,37 @@ function writeNames(subgraphs, groupByName) {
   });
 }
 
-function writeVoronoi(subgraphs) {
-  let mygeojson = { "type": "FeatureCollection", "features": [] }
-  var chosenNodes = [];
+function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
+  let mygeojson: { type: string; features: { type: string; id: number; geometry: { type: string; coordinates: [number, number][][] }; properties: { fill: string } }[] } = { "type": "FeatureCollection", "features": [] }
+  var chosenNodes: Node<NodeData>[] = [];
   subgraphs.forEach(subgraph => {
-    var nodes = [];
+    var nodes: Node<NodeData>[] = [];
     subgraph.forEachNode(node => {
       nodes.push(node)
     })
     chosenNodes.push(nodes.reduce((seed, item) => {
       return (seed && seed.data.weight > item.data.weight) ? seed : item;
-    }, null));
+    }));
 
   })
 
-  const newLocal = chosenNodes.map(node => node.data.l.split(',').map(coord => parseFloat(coord)));
+  const newLocal: [number, number][] = chosenNodes.map(node => node.data.l.split(',').map((coord: string) => parseFloat(coord)).slice(0, 2) as [number, number]);
   //console.log(JSON.stringify(newLocal))
 
   const delaunay = d.Delaunay.from(newLocal);
   const voronoi = delaunay.voronoi([-45, -45, 45, 45]);
- const neigborColor=[];
+  const neigborColor: [number, string][] = [];
   var test = [...voronoi.cellPolygons()].map(function (point) {
     var neighbor = [...voronoi.neighbors(point.index)];
     var excludedColors = neigborColor.filter(t => neighbor.includes(t[0])).map(t => t[1]);
     var color = getRandomColor(excludedColors);
-    neigborColor.push([point.index,color ]);
+    neigborColor.push([point.index, color]);
     return {
       type: "Feature",
       id: newLocal.map(node => voronoi.contains(point.index, node[0], node[1])).findIndex(element => element),
       geometry: {
         "type": "Polygon",
-        "coordinates": [point]
+        "coordinates": [point as [number, number][]]
       },
       properties: {
         fill: color
@@ -134,31 +134,55 @@ function writeVoronoi(subgraphs) {
   })
 
   mygeojson.features = test;
-
-  fs.writeFileSync('./data/v1/borders.geojson', JSON.stringify(mygeojson), function (err) {
-    if (err) {
-      console.log(err);
-    }
-  })
+  try {
+    fs.writeFileSync('./data/v1/borders.geojson', JSON.stringify(mygeojson))
+  } catch (e) {
+    console.log(e);
+  }
 }
 
 function writeGeojson() {
   const directoryPath = './data/v1/graphs';
-  var pointsDot = [];
+  var pointsDot: [number, Node<NodeData>][] = [];
   let filenames = fs.readdirSync(directoryPath)
   filenames.forEach(file => {
     const filePath = path.join(directoryPath, file);
 
-    var t = fromDot(fs.readFileSync(filePath).toString())
+    var t: Graph<NodeData, LinkData> = fromDot(fs.readFileSync(filePath).toString())
     t.forEachNode(node => {
-      pointsDot.push([parseInt(file.slice(0, -4)),node]);
+      pointsDot.push([parseInt(file.slice(0, -4)), node]);
     })
   });
 
-  let mygeojson = { "type": "FeatureCollection", "features": [] }
+  let mygeojson: {
+    type: string;
+    features: {
+      type: string;
+      geometry: { type: string; coordinates: number[] };
+      properties: {
+        label: string;
+        size: string;
+        ratings: string;
+        complexity: string;
+        min_players: string;
+        max_players: string;
+        min_players_rec: string;
+        max_players_rec: string;
+        min_players_best: string;
+        max_players_best: string;
+        min_time: string;
+        max_time: string;
+        category: string;
+        mechanic: string;
+        bayes_rating: string;
+        id: string;
+        parent: number;
+      };
+    }[];
+  } = { type: "FeatureCollection", features: [] };
   for (let point of pointsDot) {
     let feature = {
-      "type": "Feature", "geometry": { "type": "Point", "coordinates": point[1].data.l.slice(0, -1).split(",").map(str => parseFloat(str)) },
+      "type": "Feature", "geometry": { "type": "Point", "coordinates": point[1].data.l.slice(0, -1).split(",").map((str: string) => parseFloat(str)) },
       "properties": {
         "label": point[1].data.label,
         "size": point[1].data.size,
@@ -175,25 +199,24 @@ function writeGeojson() {
         "category": point[1].data.category,
         "mechanic": point[1].data.mechanic,
         "bayes_rating": point[1].data.bayes_rating,
-        "id":point[1].data.id,  
-        "parent":point[0]
+        "id": point[1].data.id,
+        "parent": point[0]
       }
     }
 
     mygeojson.features.push(feature);
   }
-  fs.writeFileSync('./data/v1/geojson/points.geojson', JSON.stringify(mygeojson), function (err) {
-    if (err) {
-      console.log(err);
-    }
-  });
-
+  try {
+    fs.writeFileSync('./data/v1/geojson/points.geojson', JSON.stringify(mygeojson));
+  } catch (e) {
+    console.log(e);
+  }
   execSync('tippecanoe --no-tile-compression -zg --drop-densest-as-needed --extend-zooms-if-still-dropping --output-to-directory data/v1/points data/v1/geojson/points.geojson --force');
 }
 
-function groupByName(strings) {
+function groupByName(strings: Game[]): Game[][] {
   // Create an object to hold the groups
-  const groups = {};
+  const groups: { [key: string]: Game[] } = {};
 
   // Iterate through the sorted list of strings
   strings.forEach(string => {
@@ -224,16 +247,17 @@ function groupByName(strings) {
 
   return result;
 }
-function getRandomColor(excludedColors) {
-  var colors = ["#516ebc","#153477","#00529c","#37009c"].filter(x => !excludedColors.includes(x));
+function getRandomColor(excludedColors: string[]): string {
+  var colors: string[] = ["#516ebc", "#153477", "#00529c", "#37009c"].filter(x => !excludedColors.includes(x));
 
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-function enrichGraphs(subgraphs) {
+function enrichGraphs(subgraphs: Graph<NodeData, LinkData>[]): Graph<NodeData, LinkData>[] {
+
   var input = fs.readFileSync('./bgg_GameItem.csv', 'utf8');
 
-  var records = parse(input, {
+  var records: GameRecord[] = parse(input, {
     columns: true,
     skip_empty_lines: true
   });
@@ -242,6 +266,7 @@ function enrichGraphs(subgraphs) {
 
   subgraphs.forEach(subgraph => subgraph.forEachNode(node => {
     var row = map.get(node.data.id.toString())
+    if (!row) return
     node.data.size = row["num_votes"],
     node.data.rating = row["avg_rating"],
     node.data.complexity = row["complexity"],
@@ -255,17 +280,17 @@ function enrichGraphs(subgraphs) {
     node.data.max_time = row["max_time"],
     node.data.category = row["category"],
     node.data.mechanic = row["mechanic"],
-    node.data.bayes_rating = row["bayes_rating"]      
+    node.data.bayes_rating = row["bayes_rating"]
   }))
 
 
   return subgraphs
 }
 
-function changeIdToLabel(subgraphs) {
+function changeIdToLabel(subgraphs: Graph<NodeData, LinkData>[]): Graph<NodeData, LinkData>[] {
   var input = fs.readFileSync('./bgg_GameItem.csv', 'utf8');
 
-  var records = parse(input, {
+  var records: GameRecord[] = parse(input, {
     columns: true,
     skip_empty_lines: true
   });
@@ -275,15 +300,69 @@ function changeIdToLabel(subgraphs) {
   return subgraphs.map(subgraph => {
     var newgraph = createGraph()
     subgraph.forEachNode(node => {
-      node.data.id = node.id
-      newgraph.addNode(map.get(node.id.toString())["name"], node.data)
+      node.data.id = node.id.toString()
+      const nodeData = map.get(node.id.toString());
+      if (nodeData) {
+        newgraph.addNode(nodeData["name"], node.data);
+      }
     })
 
     subgraph.forEachLink(link => {
-      newgraph.addLink(map.get(link.fromId.toString())["name"], map.get(link.toId.toString())["name"], link.data)
+      const fromNode = map.get(link.fromId.toString());
+      const toNode = map.get(link.toId.toString());
+      if (fromNode && toNode) {
+        newgraph.addLink(fromNode["name"], toNode["name"], link.data);
+      }
     })
 
     return newgraph
   })
 
+}
+
+interface GameRecord {
+  bgg_id: string;
+  name: string;
+  num_votes: string;
+  avg_rating: string;
+  complexity: string;
+  min_players: string;
+  max_players: string;
+  min_players_rec: string;
+  max_players_rec: string;
+  min_players_best: string;
+  max_players_best: string;
+  min_time: string;
+  max_time: string;
+  category: string;
+  mechanic: string;
+  bayes_rating: string;
+}
+interface Game {
+  Name: string;
+  x: string;
+  y: string;
+  id: string;
+}
+interface NodeData {
+  weight: any;
+  size: string;
+  rating: string;
+  complexity: string;
+  min_players: string;
+  max_players: string;
+  min_players_rec: string;
+  max_players_rec: string;
+  min_players_best: string;
+  max_players_best: string;
+  min_time: string;
+  max_time: string;
+  category: string;
+  mechanic: string;
+  bayes_rating: string;
+  id: string;
+  l: string;
+  label: string;
+}
+interface LinkData {
 }

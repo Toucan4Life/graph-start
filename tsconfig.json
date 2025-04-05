@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+      "outDir": "./built",
+      "allowJs": true,
+      "module": "ESNext",
+      "moduleResolution": "Bundler",
+          "lib": ["es2023"],
+      "target": "es2022",
+          // Generate d.ts files
+    "declaration": true,
+    // This compiler run should
+    // only output d.ts files
+    "emitDeclarationOnly": true,
+    "strict": true,
+    "skipLibCheck": true
+    },
+    "include": ["./src/**/*"]
+  }

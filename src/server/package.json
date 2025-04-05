@@ -16,5 +16,11 @@
     "express": "^4.19.2",
     "path": "^0.12.7",
     "serve-index": "^1.9.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/d3-delaunay": "^6.0.4",
+    "@types/express": "^5.0.1",
+    "@types/serve-index": "^1.9.4"
   }
 }
