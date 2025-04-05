@@ -1,0 +1,37 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "npm",
+            "script": "dev",
+            "label": "start client",
+            "detail": "vite",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    // This is not needed but, required by the problemMatcher Object
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "VITE",
+                    // Ensures that browser is only opened after the task is completed.
+                    "endsPattern": "ready"
+                }
+            }
+        },
+        {
+            "label": "stop client",
+            "command": "echo ${input:terminate}",
+            "type": "shell"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "terminate",
+            "type": "command",
+            "command": "workbench.action.tasks.terminate",
+            "args": "terminateAll"
+        }
+    ]
+}
