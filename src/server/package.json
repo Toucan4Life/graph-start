@@ -2,10 +2,10 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "server.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "tsx server.ts"
   },
   "author": "",
   "license": "ISC",
@@ -29,6 +29,8 @@
     "eslint-config-prettier": "^10.1.1",
     "globals": "^16.0.0",
     "prettier": "^3.5.3",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
     "typescript-eslint": "^8.29.0"
   }
 }
