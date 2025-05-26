@@ -66,7 +66,18 @@ app.get("/render", (_req, res) => {
     { label: string; id: number; l: string },
     { weight: number }
   > = fromDot(fs.readFileSync("./graph/subgraph_38.dot").toString());
-
+  fs.readdirSync("./data/v2/geojson").forEach((file) => {
+    fs.unlinkSync(path.join("./data/v2/geojson", file));
+  });
+  fs.readdirSync("./data/v2/graphs").forEach((file) => {
+    fs.unlinkSync(path.join("./data/v2/graphs", file));
+  });
+  fs.readdirSync("./data/v2/names").forEach((file) => {
+    fs.unlinkSync(path.join("./data/v2/names", file));
+  });
+  fs.readdirSync("./data/v2/points").forEach((file) => {
+    fs.unlinkSync(path.join("./data/v2/points", file));
+  });
   graph = calculateLayout(graph);
   let subgraphs: Graph<NodeData, LinkData>[];
   subgraphs = changeIdToLabel([graph]);
@@ -117,7 +128,7 @@ function writeGraphs(subgraphs: Graph<NodeData, LinkData>[]) {
     // })
     try {
       fs.writeFileSync(
-        join("data", "v1", "graphs", i + ".dot"),
+        join("data", "v2", "graphs", i + ".dot"),
         toDot(subgraph)
       );
       // file written successfully
@@ -152,7 +163,7 @@ function writeNames(
   const arrays = groupByName(namesArray);
   arrays.forEach((gamelist) => {
     fs.writeFileSync(
-      join("data", "v1", "names", gamelist[0].Name[0].toLowerCase() + ".json"),
+      join("data", "v2", "names", gamelist[0].Name[0].toLowerCase() + ".json"),
       JSON.stringify(
         gamelist.map((element) => [
           element.Name,
@@ -224,14 +235,14 @@ function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
 
   mygeojson.features = test;
   try {
-    fs.writeFileSync("./data/v1/borders.geojson", JSON.stringify(mygeojson));
+    fs.writeFileSync("./data/v2/borders.geojson", JSON.stringify(mygeojson));
   } catch (e) {
     console.log(e);
   }
 }
 
 function writeGeojson() {
-  const directoryPath = "./data/v1/graphs";
+  const directoryPath = "./data/v2/graphs";
   const pointsDot: [number, Node<NodeData>][] = [];
   const filenames = fs.readdirSync(directoryPath);
   filenames.forEach((file) => {
@@ -306,14 +317,14 @@ function writeGeojson() {
   }
   try {
     fs.writeFileSync(
-      "./data/v1/geojson/points.geojson",
+      "./data/v2/geojson/points.geojson",
       JSON.stringify(mygeojson)
     );
   } catch (e) {
     console.log(e);
   }
   execSync(
-    "tippecanoe --no-tile-compression -zg --drop-densest-as-needed --extend-zooms-if-still-dropping --output-to-directory data/v1/points data/v1/geojson/points.geojson --force"
+    "tippecanoe --no-tile-compression -zg --drop-densest-as-needed --extend-zooms-if-still-dropping --output-to-directory data/v2/points data/v2/geojson/points.geojson --force"
   );
 }
 
@@ -408,7 +419,7 @@ function changeIdToLabel(
   return subgraphs.map((subgraph) => {
     const newgraph = createGraph();
     subgraph.forEachNode((node) => {
-     // node.data.id = node.id.toString();
+      // node.data.id = node.id.toString();
       const nodeData = map.get(node.data.id.toString());
       if (nodeData) {
         newgraph.addNode(nodeData["name"], node.data);
