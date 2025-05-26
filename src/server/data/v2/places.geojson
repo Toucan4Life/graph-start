@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.981,
+          12.556
+        ]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "PlaceHolder",
+        "labelId": "7xkld",
+        "ownerId": 0
+      }
+    }
+  ]
+}
