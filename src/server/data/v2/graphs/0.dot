@@ -1,0 +1,11 @@
+digraph G {
+"Dale of Merchants Collection" -> "Dale of Merchants 2" ["weight"=0.407957228805656]
+"Dale of Merchants Collection" -> "Dale of Merchants 2" ["weight"=0.407957228805656]
+"Dale of Merchants 3" -> "Dale of Merchants 2" ["weight"=0.474002749803726]
+"Dale of Merchants 3" -> "Dale of Merchants 2" ["weight"=0.474002749803726]
+"Dale of Merchants 3" -> "Dale of Merchants Collection" ["weight"=0.529586943946194]
+"Dale of Merchants 3" -> "Dale of Merchants Collection" ["weight"=0.529586943946194]
+"Dale of Merchants 2" ["label"="Dale of Merchants 2" "id"=191597 "l"="-4.071974279571951,-2.096735074449388" "size"="2525" "rating"="7.28889" "complexity"="2.0714" "min_players"="2" "max_players"="4" "min_players_rec"="2" "max_players_rec"="4" "min_players_best"="2" "max_players_best"="3" "min_time"="30" "max_time"="30" "category"="1089,1002,1010,1120" "mechanic"="2664,2072,2040,2041,2004,2686,2019" "bayes_rating"="6.43731"]
+"Dale of Merchants Collection" ["label"="Dale of Merchants Collection" "id"=251551 "l"="1.9373628681628452,-1.5284290759101888" "size"="1237" "rating"="7.79273" "complexity"="2.2941" "min_players"="2" "max_players"="4" "min_players_rec"="2" "max_players_rec"="4" "min_players_best"="2" "max_players_best"="3" "min_time"="20" "max_time"="60" "category"="1089,1002,1010" "mechanic"="2664,2072,2040,2041,2004,2686,2019,2015" "bayes_rating"="6.30946"]
+"Dale of Merchants 3" ["label"="Dale of Merchants 3" "id"=299452 "l"="-0.6660853141574705,-6.267077770087302" "size"="784" "rating"="7.65794" "complexity"="2.1429" "min_players"="2" "max_players"="4" "min_players_rec"="2" "max_players_rec"="4" "min_players_best"="2" "max_players_best"="4" "min_time"="20" "max_time"="40" "category"="1089,1002,1010" "mechanic"="2664,2072,2040,2041,2004,2686,2019" "bayes_rating"="6.06718"]
+}
