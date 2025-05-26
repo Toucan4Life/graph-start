@@ -463,7 +463,7 @@ export default function createGraphScene(canvas) {
         text,
         x: node.ui.position[0],
         y: node.ui.position[1] - node.ui.size / 2,
-        limit: node.ui.size,
+        limit: 4,
         cx: 0.5
       });
     });

@@ -7,6 +7,7 @@ import fromDot from "ngraph.fromdot";
 import createGraph, { Graph, Node } from "ngraph.graph";
 import toDot from "ngraph.todot";
 import * as d from "d3-delaunay";
+import createLayout from "ngraph.forcelayout";
 import { parse } from "csv-parse/sync";
 
 const app = express();
@@ -54,9 +55,58 @@ app.post("/ship", (r, s) => {
   });
 });
 
+app.get("/render", (_req, res) => {
+  // const graphDir = "./graph";
+
+  // const files = fs.readdirSync(graphDir);
+  // const graphs = files.map((file) => {
+  //   return fromDot(file);
+  // });
+  let graph: Graph<
+    { label: string; id: number; l: string },
+    { weight: number }
+  > = fromDot(fs.readFileSync("./graph/subgraph_38.dot").toString());
+
+  graph = calculateLayout(graph);
+  let subgraphs: Graph<NodeData, LinkData>[];
+  subgraphs = changeIdToLabel([graph]);
+  subgraphs = enrichGraphs(subgraphs);
+  writeGraphs(subgraphs);
+  writeNames(subgraphs, groupByName);
+  writeGeojson();
+  writeVoronoi(subgraphs);
+  // const dottedgraph = toDot(graph);
+  // fs.writeFileSync("./graph_layout/subgraph_1.dot", dottedgraph, { flag: "w" });
+  res.send("Done Rendering");
+});
+
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
+function calculateLayout(
+  graph: Graph<{ label: string; id: number; l: string }, { weight: number }>
+): Graph<{ label: string; id: number; l: string }, { weight: number }> {
+  const layout = createLayout(graph, {
+    timeStep: 1,
+    springLength: 10,
+    springCoefficient: 0.8,
+    gravity: -12,
+    dragCoefficient: 0.9,
+  });
+
+  for (let i = 0; i < 10000 && !layout.step(); i++) {
+    if (i % 1000 === 0) {
+      console.log(`Step: ${i}`);
+    }
+  }
+
+  graph.forEachNode((node) => {
+    const pos = layout.getNodePosition(node.id);
+    node.data.l = `${pos.x},${pos.y}`;
+  });
+  return graph;
+}
 
 function writeGraphs(subgraphs: Graph<NodeData, LinkData>[]) {
   let i = 0;
@@ -358,18 +408,22 @@ function changeIdToLabel(
   return subgraphs.map((subgraph) => {
     const newgraph = createGraph();
     subgraph.forEachNode((node) => {
-      node.data.id = node.id.toString();
-      const nodeData = map.get(node.id.toString());
+     // node.data.id = node.id.toString();
+      const nodeData = map.get(node.data.id.toString());
       if (nodeData) {
         newgraph.addNode(nodeData["name"], node.data);
       }
     });
 
     subgraph.forEachLink((link) => {
-      const fromNode = map.get(link.fromId.toString());
-      const toNode = map.get(link.toId.toString());
-      if (fromNode && toNode) {
-        newgraph.addLink(fromNode["name"], toNode["name"], link.data);
+      const fromNodeObj = subgraph.getNode(link.fromId);
+      const toNodeObj = subgraph.getNode(link.toId);
+      if (fromNodeObj && toNodeObj) {
+        const fromNode = map.get(fromNodeObj.data.id.toString());
+        const toNode = map.get(toNodeObj.data.id.toString());
+        if (fromNode && toNode) {
+          newgraph.addLink(fromNode["name"], toNode["name"], link.data);
+        }
       }
     });
 

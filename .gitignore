@@ -25,3 +25,6 @@ src/server/data copy
 src/server/package-lock.json
 src/server/bgg_GameItem.csv
 built
+src/server/graph/
+src/server/graph_layout/
+src/server/bgg_GameItem_old.csv
