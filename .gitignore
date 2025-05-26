@@ -14,7 +14,6 @@ yarn-error.log*
 
 # Editor directories and files
 .idea
-.vscode
 *.suo
 *.ntvs*
 *.njsproj
@@ -25,3 +24,4 @@ src/server/package-lock.json
 src/server/data copy
 src/server/package-lock.json
 src/server/bgg_GameItem.csv
+built

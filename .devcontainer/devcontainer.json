@@ -15,6 +15,14 @@
 		"ghcr.io/devcontainers-contrib/features/homebrew-package:1": {
 			"package":"tippecanoe"
 		}
+	},
+	"portsAttributes": {
+		"3000": {
+			"label": "client"
+		},
+		"3010": {
+			"label": "server"
+		}
 	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
