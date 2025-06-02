@@ -7,7 +7,7 @@ import fromDot from "ngraph.fromdot";
 import createGraph, { Graph, Node } from "ngraph.graph";
 import toDot from "ngraph.todot";
 import * as d from "d3-delaunay";
-import createLayout from "ngraph.forcelayout";
+import createLayout, { Layout } from "ngraph.forcelayout";
 import { parse } from "csv-parse/sync";
 
 const app = express();
@@ -56,16 +56,6 @@ app.post("/ship", (r, s) => {
 });
 
 app.get("/render", (_req, res) => {
-  // const graphDir = "./graph";
-
-  // const files = fs.readdirSync(graphDir);
-  // const graphs = files.map((file) => {
-  //   return fromDot(file);
-  // });
-  let graph: Graph<
-    { label: string; id: number; l: string },
-    { weight: number }
-  > = fromDot(fs.readFileSync("./graph/subgraph_38.dot").toString());
   fs.readdirSync("./data/v2/geojson").forEach((file) => {
     fs.unlinkSync(path.join("./data/v2/geojson", file));
   });
@@ -78,9 +68,25 @@ app.get("/render", (_req, res) => {
   fs.readdirSync("./data/v2/points").forEach((file) => {
     fs.unlinkSync(path.join("./data/v2/points", file));
   });
-  graph = calculateLayout(graph);
-  let subgraphs: Graph<NodeData, LinkData>[];
-  subgraphs = changeIdToLabel([graph]);
+
+  let subgraphs: Graph<NodeData, LinkData>[] = [];
+  const clusterGraph: Graph<
+    { label: string; id: number; l: string },
+    { weight: number }
+  > = fromDot(fs.readFileSync("./graph/clustered_graph.dot").toString());
+
+  const clusterLayout = calculateClusteredLayout(clusterGraph);
+  for (let i = 36; i < 39; i++) {
+    const offset = clusterLayout.getNodePosition(i);
+    let graph: Graph<{ label: string; id: number; l: string },{ weight: number }> = fromDot(
+      fs.readFileSync("./graph/subgraph_" + i + ".dot").toString()
+    );
+
+    graph = calculateLayout(graph, [offset.x, offset.y]);
+    subgraphs.push(graph);
+  }
+
+  subgraphs = changeIdToLabel(subgraphs);
   subgraphs = enrichGraphs(subgraphs);
   writeGraphs(subgraphs);
   writeNames(subgraphs, groupByName);
@@ -95,8 +101,28 @@ app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
 
-function calculateLayout(
+function calculateClusteredLayout(
   graph: Graph<{ label: string; id: number; l: string }, { weight: number }>
+): Layout<Graph<{ label: string; id: number; l: string }, { weight: number }>> {
+  const layout = createLayout(graph, {
+    timeStep: 1,
+    springLength: 10,
+    springCoefficient: 0.8,
+    gravity: -12,
+    dragCoefficient: 0.9,
+  });
+
+  for (let i = 0; i < 10000 && !layout.step(); i++) {
+    if (i % 1000 === 0) {
+      console.log(`Step: ${i}`);
+    }
+  }
+  return layout;
+}
+
+function calculateLayout(
+  graph: Graph<{ label: string; id: number; l: string }, { weight: number }>,
+  offset: [number, number] = [0, 0]
 ): Graph<{ label: string; id: number; l: string }, { weight: number }> {
   const layout = createLayout(graph, {
     timeStep: 1,
@@ -114,7 +140,7 @@ function calculateLayout(
 
   graph.forEachNode((node) => {
     const pos = layout.getNodePosition(node.id);
-    node.data.l = `${pos.x},${pos.y}`;
+    node.data.l = `${(pos.y + offset[1])/4},${(pos.x + offset[0])/4}`;
   });
   return graph;
 }
@@ -209,7 +235,7 @@ function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
   //console.log(JSON.stringify(newLocal))
 
   const delaunay = d.Delaunay.from(newLocal);
-  const voronoi = delaunay.voronoi([-45, -45, 45, 45]);
+  const voronoi = delaunay.voronoi([-90, -45, 90, 45]);
   const neigborColor: [number, string][] = [];
   const test = [...voronoi.cellPolygons()].map(function (point) {
     const neighbor = [...voronoi.neighbors(point.index)];
