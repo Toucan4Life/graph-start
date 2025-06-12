@@ -4,11 +4,13 @@ import fs from "fs";
 import serveIndex from "serve-index";
 import path from "path";
 import fromDot from "ngraph.fromdot";
-import createGraph, { Graph, Node } from "ngraph.graph";
+import createGraph, { Graph, Node, NodeId } from "ngraph.graph";
 import toDot from "ngraph.todot";
 import * as d from "d3-delaunay";
 import createLayout, { Layout } from "ngraph.forcelayout";
 import { parse } from "csv-parse/sync";
+import * as d3 from "d3";
+import * as turf from "@turf/turf";
 
 const app = express();
 const port = 3010;
@@ -19,6 +21,7 @@ app.use(cors());
 import { fileURLToPath } from "url";
 import { join } from "path";
 import { execSync } from "child_process";
+import { Console } from "console";
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -66,24 +69,94 @@ app.get("/render", (_req, res) => {
     fs.unlinkSync(path.join("./data/v2/names", file));
   });
   fs.readdirSync("./data/v2/points").forEach((file) => {
-    fs.unlinkSync(path.join("./data/v2/points", file));
+    const curPath = path.join("./data/v2/points", file);
+    if (fs.lstatSync(curPath).isDirectory()) {
+      fs.rmSync(curPath, { recursive: true, force: true });
+    } else {
+      fs.unlinkSync(curPath);
+    }
   });
 
   let subgraphs: Graph<NodeData, LinkData>[] = [];
+  const graphFiles =
+    fs.readdirSync("./graph").filter((file) => file.endsWith(".dot")).length -
+    1; // Exclude the clustered_graph.dot file
+  const subgraphsboxs: [number] = new Array(graphFiles).fill(0);
+  const graphToInclude = 7;
+  for (let i = graphFiles - graphToInclude; i < graphFiles; i++) {
+    const graph: Graph<
+      { label: string; id: string; l: string },
+      { weight: number }
+    > = fromDot(fs.readFileSync("./graph/subgraph_" + i + ".dot").toString());
+
+    const graphAndLayout = calculateLayout(graph);
+    const GraphRect = graphAndLayout[1].getGraphRect();
+    subgraphsboxs[i] =
+      Math.sqrt(
+        Math.pow(Math.abs(GraphRect.max_x - GraphRect.min_x), 2) +
+          Math.pow(Math.abs(GraphRect.max_y - GraphRect.min_y), 2)
+      ) / 2;
+    subgraphs.push(graphAndLayout[0]);
+  }
+
   const clusterGraph: Graph<
-    { label: string; id: number; l: string },
+    { label: string; id: string; l: string },
     { weight: number }
   > = fromDot(fs.readFileSync("./graph/clustered_graph.dot").toString());
+  for (let i = 0; i < graphFiles - graphToInclude; i++) {
+    // const links = clusterGraph.getLinks(i);
+    // if (links === null) {
+    //   console.warn(`No links found for node ${i}`);
+    //   continue;
+    // }
+    // links.forEach((link) => {
+    //   clusterGraph.removeLink(link);
+    // });
+    clusterGraph.removeNode(i);
+  }
+  const clusterLayout = calculateClusteredLayout(clusterGraph, subgraphsboxs);
 
-  const clusterLayout = calculateClusteredLayout(clusterGraph);
-  for (let i = 36; i < 39; i++) {
-    const offset = clusterLayout.getNodePosition(i);
-    let graph: Graph<{ label: string; id: number; l: string },{ weight: number }> = fromDot(
-      fs.readFileSync("./graph/subgraph_" + i + ".dot").toString()
-    );
+  for (let i = 0; i < graphToInclude; i++) {
+    const offset = clusterLayout[i + graphFiles - graphToInclude];
+    const g = subgraphs[i];
+    let newG = applyOffset(g, offset, {
+      x: 1,
+      y: 1,
+    });
+    subgraphs[i] = newG;
+  }
 
-    graph = calculateLayout(graph, [offset.x, offset.y]);
-    subgraphs.push(graph);
+  const nodes = subgraphs.flatMap((subgraph) => {
+    const array: { x: number; y: number }[] = [];
+    subgraph.forEachNode((node) => {
+      const coords = node.data.l
+        .split(",")
+        .map((coord: string) => parseFloat(coord))
+        .slice(0, 2) as [number, number];
+      array.push({ x: coords[0], y: coords[1] });
+    });
+    return array;
+  });
+
+  const max_x = Math.max(...nodes.map((node) => node.x));
+  const max_y = Math.max(...nodes.map((node) => node.y));
+  const min_x = Math.min(...nodes.map((node) => node.x));
+  const min_y = Math.min(...nodes.map((node) => node.y));
+
+  const offset = {
+    x: -(max_x + min_x) / 2,
+    y: -(max_y + min_y) / 2,
+  };
+
+  const factor = {
+    x: (max_x - min_x) / 2 / 90,
+    y: (max_y - min_y) / 2 / 45,
+  };
+
+  for (let i = 0; i < graphToInclude; i++) {
+    const g = subgraphs[i];
+    let newG = applyOffset(g, offset, factor);
+    subgraphs[i] = newG;
   }
 
   subgraphs = changeIdToLabel(subgraphs);
@@ -91,7 +164,17 @@ app.get("/render", (_req, res) => {
   writeGraphs(subgraphs);
   writeNames(subgraphs, groupByName);
   writeGeojson();
-  writeVoronoi(subgraphs);
+
+  const voronoiPoints: {
+    x: number;
+    y: number;
+  }[] = clusterLayout.slice(-graphToInclude).map((pos) => {
+    pos.x = (pos.x + offset.x) / factor.x;
+    pos.y = (pos.y + offset.y) / factor.y;
+    return pos;
+  });
+  //writeVoronoi(voronoiPoints);
+  writeVoronoi2(subgraphs);
   // const dottedgraph = toDot(graph);
   // fs.writeFileSync("./graph_layout/subgraph_1.dot", dottedgraph, { flag: "w" });
   res.send("Done Rendering");
@@ -101,9 +184,69 @@ app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
 
+function applyOffset(
+  graph: Graph<{ label: string; id: number; l: string }, { weight: number }>,
+  offset: { x: number; y: number },
+  factor: { x: number; y: number }
+): Graph<{ label: string; id: number; l: string }, { weight: number }> {
+  graph.forEachNode((node) => {
+    const pos = node.data.l
+      .split(",")
+      .map((coord: string) => parseFloat(coord))
+      .slice(0, 2) as [number, number];
+    node.data.l = `${(pos[0] + offset.x) / factor.x},${(pos[1] + offset.y) / factor.y}`;
+  });
+
+  return graph;
+}
+
 function calculateClusteredLayout(
-  graph: Graph<{ label: string; id: number; l: string }, { weight: number }>
-): Layout<Graph<{ label: string; id: number; l: string }, { weight: number }>> {
+  graph: Graph<{ label: string; id: string; l: string }, { weight: number }>,
+  subgraphsboxs: [number]
+): { x: number; y: number }[] {
+  // const nodes: (d3.SimulationNodeDatum & { id: number })[] = [];
+  // graph.forEachNode((node) => {
+  //   nodes.push({
+  //     id: parseInt(node.id.toString()),
+  //   });
+  // });
+
+  // // Extract links from ngraph
+  // const links: d3.SimulationLinkDatum<d3.SimulationNodeDatum>[] = [];
+  // graph.forEachLink((link) => {
+  //   links.push({
+  //     source: link.fromId,
+  //     target: link.toId,
+  //     weight: link.data.weight,
+  //   });
+  // });
+
+  // // Create D3 force simulation
+  // const simulation = d3
+  //   .forceSimulation<
+  //     d3.SimulationNodeDatum & { id: number },
+  //     d3.SimulationLinkDatum<d3.SimulationNodeDatum & { id: number }>
+  //   >(nodes)
+  //   .force(
+  //     "link",
+  //     d3
+  //       .forceLink(links)
+  //       .id((d) => d.id)
+  //       // .strength((d) => d.weight)
+  //       .distance(100)
+  //   )
+  //   .force("charge", d3.forceManyBody().strength(-300))
+  //   .force("center", d3.forceCenter())
+  //   .force(
+  //     "collision",
+  //     d3.forceCollide().radius((d) => subgraphsboxs[d.index as number] + 2)
+  //   ); // Add padding between nodes
+
+  // console.log("Starting simulation for clustered layout");
+  // simulation.stop();
+  // for (let i = 0; i < 100; ++i) simulation.tick();
+  // console.log("Ending simulation for clustered layout");
+
   const layout = createLayout(graph, {
     timeStep: 1,
     springLength: 10,
@@ -111,19 +254,42 @@ function calculateClusteredLayout(
     gravity: -12,
     dragCoefficient: 0.9,
   });
-
+  graph.forEachLink((link) => {
+    const spring = layout.getSpring(link.fromId, link.toId);
+    const fromR = subgraphsboxs[link.fromId as number];
+    const toR = subgraphsboxs[link.toId as number];
+    if (!spring) {
+      console.warn("spring not found");
+      return;
+    }
+    spring.length = 550 + fromR + toR;
+  });
   for (let i = 0; i < 10000 && !layout.step(); i++) {
     if (i % 1000 === 0) {
       console.log(`Step: ${i}`);
     }
   }
-  return layout;
+
+  const array: { x: number; y: number }[] = new Array(
+    subgraphsboxs.length
+  ).fill({ x: 0, y: 0 });
+  graph.forEachNode((node) => {
+    array[parseInt(node.id.toString())] = layout.getNodePosition(node.id);
+  });
+
+  // nodes.forEach((node) => {
+  //   array[parseInt(node.id.toString())] = { x: node.x, y: node.y };
+  // });
+
+  return array;
 }
 
 function calculateLayout(
-  graph: Graph<{ label: string; id: number; l: string }, { weight: number }>,
-  offset: [number, number] = [0, 0]
-): Graph<{ label: string; id: number; l: string }, { weight: number }> {
+  graph: Graph<{ label: string; id: string; l: string }, { weight: number }>
+): [
+  Graph<{ label: string; id: string; l: string }, { weight: number }>,
+  Layout<Graph<{ label: string; id: string; l: string }, { weight: number }>>,
+] {
   const layout = createLayout(graph, {
     timeStep: 1,
     springLength: 10,
@@ -140,9 +306,9 @@ function calculateLayout(
 
   graph.forEachNode((node) => {
     const pos = layout.getNodePosition(node.id);
-    node.data.l = `${(pos.y + offset[1])/4},${(pos.x + offset[0])/4}`;
+    node.data.l = `${pos.x},${pos.y}`;
   });
-  return graph;
+  return [graph, layout];
 }
 
 function writeGraphs(subgraphs: Graph<NodeData, LinkData>[]) {
@@ -201,8 +367,84 @@ function writeNames(
     );
   });
 }
+function writeVoronoi2(subgraphs: Graph<NodeData, LinkData>[]) {
+  const nodes: {
+    x: number;
+    y: number;
+    subgraph: number;
+    id: string;
+    polygon: d.Delaunay.Polygon;
+    neighbor: number[];
+  }[] = [];
+  subgraphs.forEach((subgraph, index) => {
+    subgraph.forEachNode((node) => {
+      const newLocal = node.data.l
+        .split(",")
+        .map((coord: string) => parseFloat(coord));
+      nodes.push({
+        x: newLocal[0],
+        y: newLocal[1],
+        subgraph: index,
+        id: node.data.id,
+        polygon: [],
+        neighbor: [],
+      });
+    });
+  });
 
-function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
+  const newLocal: [number, number][] = nodes.map((p) => [p.x, p.y]);
+  //console.log(JSON.stringify(newLocal))
+
+  const delaunay = d.Delaunay.from(newLocal);
+  const voronoi = delaunay.voronoi([-90, -45, 90, 45]);
+  const neigborColor: [number, string][] = [];
+  for (let i = 0; i < nodes.length; i++) {
+    nodes[i].polygon = voronoi.cellPolygon(i);
+    nodes[i].neighbor = [...voronoi.neighbors(i)];
+  }
+
+  const nodesBySubgraph: { [key: number]: typeof nodes } = {};
+  nodes.forEach((node) => {
+    if (!nodesBySubgraph[node.subgraph]) {
+      nodesBySubgraph[node.subgraph] = [];
+    }
+    nodesBySubgraph[node.subgraph].push(node);
+  });
+
+  // Iterate over nodesBySubgraph and log the subgraph index and number of nodes
+  const test2 = Object.entries(nodesBySubgraph).map(
+    ([subgraphIndex, nodesArray]) => {
+      const points = nodesArray.map((node) => {
+        const points = node.polygon.map((point) => [point[0], point[1]]);
+        return turf.polygon([points]);
+      });
+      return turf.union(turf.featureCollection(points));
+    }
+  );
+
+  let test4 = test2.map((t,i) => {
+    const neighbor : number[]= test2.map((n,j) => [n,j]).filter(n => turf.booleanIntersects(t,n[0])).map((n) => n[1]);
+    const excludedColors = neigborColor
+      .filter((t) => neighbor.includes(t[0]))
+      .map((t) => t[1]);
+    const color = getRandomColor(excludedColors);
+    neigborColor.push([i, color]);
+    return computeGeoFeature(
+      t?.geometry.coordinates[0],
+      color,
+      i
+    );
+  });
+  // const test = [...voronoi.cellPolygons()].map(function (point) {
+  //   const neighbor = [...voronoi.neighbors(point.index)];
+  //   const excludedColors = neigborColor
+  //     .filter((t) => neighbor.includes(t[0]))
+  //     .map((t) => t[1]);
+  //   const color = getRandomColor(excludedColors);
+  //   neigborColor.push([point.index, color]);
+  //   return computeGeoFeature(point, color);
+  // });
+
   const mygeojson: {
     type: string;
     features: {
@@ -212,26 +454,39 @@ function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
       properties: { fill: string };
     }[];
   } = { type: "FeatureCollection", features: [] };
-  const chosenNodes: Node<NodeData>[] = [];
-  subgraphs.forEach((subgraph) => {
-    const nodes: Node<NodeData>[] = [];
-    subgraph.forEachNode((node) => {
-      nodes.push(node);
-    });
-    chosenNodes.push(
-      nodes.reduce((seed, item) => {
-        return seed && seed.data.weight > item.data.weight ? seed : item;
-      })
-    );
-  });
+  mygeojson.features = test4;
+  try {
+    fs.writeFileSync("./data/v2/borders.geojson", JSON.stringify(mygeojson));
+  } catch (e) {
+    console.log(e);
+  }
 
-  const newLocal: [number, number][] = chosenNodes.map(
-    (node) =>
-      node.data.l
-        .split(",")
-        .map((coord: string) => parseFloat(coord))
-        .slice(0, 2) as [number, number]
-  );
+  function computeGeoFeature(
+    point: d.Delaunay.Polygon & { index: number },
+    color: string,
+    index: number
+  ): {
+    type: string;
+    id: number;
+    geometry: { type: string; coordinates: [number, number][][] };
+    properties: { fill: string };
+  } {
+    return {
+      type: "Feature",
+      id: index,
+      geometry: {
+        type: "Polygon",
+        coordinates: [point as [number, number][]],
+      },
+      properties: {
+        fill: color,
+      },
+    };
+  }
+}
+
+function writeVoronoi(points: { x: number; y: number }[]) {
+  const newLocal: [number, number][] = points.map((p) => [p.x, p.y]);
   //console.log(JSON.stringify(newLocal))
 
   const delaunay = d.Delaunay.from(newLocal);
@@ -259,6 +514,15 @@ function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
     };
   });
 
+  const mygeojson: {
+    type: string;
+    features: {
+      type: string;
+      id: number;
+      geometry: { type: string; coordinates: [number, number][][] };
+      properties: { fill: string };
+    }[];
+  } = { type: "FeatureCollection", features: [] };
   mygeojson.features = test;
   try {
     fs.writeFileSync("./data/v2/borders.geojson", JSON.stringify(mygeojson));
@@ -314,7 +578,6 @@ function writeGeojson() {
       geometry: {
         type: "Point",
         coordinates: point[1].data.l
-          .slice(0, -1)
           .split(",")
           .map((str: string) => parseFloat(str)),
       },
