@@ -82,7 +82,9 @@ app.get("/render", (_req, res) => {
     fs.readdirSync("./graph").filter((file) => file.endsWith(".dot")).length -
     1; // Exclude the clustered_graph.dot file
   const subgraphsboxs: [number] = new Array(graphFiles).fill(0);
-  const graphToInclude = 7;
+
+  const subgraphsnodecounts: [number] = new Array(graphFiles).fill(0);
+  const graphToInclude = 8;
   for (let i = graphFiles - graphToInclude; i < graphFiles; i++) {
     const graph: Graph<
       { label: string; id: string; l: string },
@@ -96,6 +98,7 @@ app.get("/render", (_req, res) => {
         Math.pow(Math.abs(GraphRect.max_x - GraphRect.min_x), 2) +
           Math.pow(Math.abs(GraphRect.max_y - GraphRect.min_y), 2)
       ) / 2;
+    subgraphsnodecounts[i] = graph.getNodesCount();
     subgraphs.push(graphAndLayout[0]);
   }
 
@@ -114,8 +117,16 @@ app.get("/render", (_req, res) => {
     // });
     clusterGraph.removeNode(i);
   }
-  const clusterLayout = calculateClusteredLayout(clusterGraph, subgraphsboxs);
-
+  // const clusterLayout2 = calculateClusteredLayout(
+  //   clusterGraph,
+  //   subgraphsboxs,
+  //   subgraphsnodecounts
+  // );
+  const clusterLayout = calculateClusteredLayoutTest(
+    clusterGraph,
+    subgraphsboxs,
+    subgraphsnodecounts,graphFiles - graphToInclude
+  );
   for (let i = 0; i < graphToInclude; i++) {
     const offset = clusterLayout[i + graphFiles - graphToInclude];
     const g = subgraphs[i];
@@ -199,53 +210,117 @@ function applyOffset(
 
   return graph;
 }
+function calculateClusteredLayoutTest(
+  graph: Graph<{ label: string; id: string; l: string }, { weight: number }>,
+  subgraphsboxs: [number],
+  subgraphsnodecounts: [number],offset:number
+): { x: number; y: number }[] {
+  let nodes: Node<{ id: string }>[] = [];
+  graph.forEachNode((node) => {
+    nodes.push(node);
+  });
+
+  let links: { fromId: NodeId; toId: NodeId; data: { weight: number } }[] = [];
+  graph.forEachLink((link) => {
+    links.push({
+      fromId: link.fromId,
+      toId: link.toId,
+      data: { weight: link.data.weight },
+    });
+  });
+
+  return calculateClusteredLayoutClaude(nodes, links, subgraphsboxs, offset);
+}
+
+function calculateClusteredLayoutClaude(
+  nodes: Node<{ id: string }>[],
+  links: { fromId: NodeId; toId: NodeId; data: { weight: number } }[],
+  nodeRadius: [number], offset:number
+): { x: number; y: number }[] {
+  // Create D3 nodes with radius information
+  const d3Nodes = nodes.map((node, i) => ({
+    id: node.data.id,
+    index: i,
+    radius: nodeRadius[i + offset],
+    x: Math.random() * 400, // Initial random position
+    y: Math.random() * 400,
+  }));
+
+  // Create D3 links with weight information
+  const d3Links = links
+    .map((link) => ({
+      source: d3Nodes.find((n) => n.id === link.fromId),
+      target: d3Nodes.find((n) => n.id === link.toId),
+      weight: link.data.weight,
+    }))
+    .filter((link) => link.source && link.target); // Filter out invalid links
+
+  // Create force simulation
+  const simulation = d3
+    .forceSimulation(d3Nodes)
+    .force(
+      "link",
+      d3
+        .forceLink(d3Links)
+        .id((d) => d.id)
+        //.distance((d) => d.source.radius + d.target.radius + 10)
+        .strength((d) => d.weight*10)
+    )
+    .force(
+      "charge",
+      d3.forceManyBody().strength((d) => {
+        return -5;
+      })
+    )
+    .force(
+      "collision",
+      d3
+        .forceCollide()
+        .radius((d) => d.radius + 2) // Add small padding
+        .strength(0.9)
+    )
+    .force("center", d3.forceCenter(200, 200))
+    .force("x", d3.forceX(200).strength(0.1))
+    .force("y", d3.forceY(200).strength(0.1));
+
+  // Run simulation for a fixed number of iterations
+  const numIterations = 3000;
+  for (let i = 0; i < numIterations; i++) {
+    simulation.tick();
+  }
+  const array: { x: number; y: number }[] = new Array(nodeRadius.length).fill({
+    x: 0,
+    y: 0,
+  });
+  d3Nodes.forEach((node) => {
+    array[node.index + offset] = {
+      x: node.x,
+      y: node.y,
+    };
+  });
+  // Return only the coordinates in the same order as input nodes
+  return array;
+}
 
 function calculateClusteredLayout(
   graph: Graph<{ label: string; id: string; l: string }, { weight: number }>,
-  subgraphsboxs: [number]
+  subgraphsboxs: [number],
+  subgraphsnodecounts: [number]
 ): { x: number; y: number }[] {
-  // const nodes: (d3.SimulationNodeDatum & { id: number })[] = [];
+  // const bestLinks: any[] = [];
+
   // graph.forEachNode((node) => {
-  //   nodes.push({
-  //     id: parseInt(node.id.toString()),
-  //   });
+  //   let nodeLinks = node.links;
+  //   nodeLinks.sort((a, b) => b.data.weight - a.data.weight);
+  //   if (nodeLinks.length > 0) {
+  //     bestLinks.push(nodeLinks[0]);
+  //   }
+  //   if (nodeLinks.length > 1) {
+  //     bestLinks.push(nodeLinks[1]);
+  //   }
   // });
-
-  // // Extract links from ngraph
-  // const links: d3.SimulationLinkDatum<d3.SimulationNodeDatum>[] = [];
-  // graph.forEachLink((link) => {
-  //   links.push({
-  //     source: link.fromId,
-  //     target: link.toId,
-  //     weight: link.data.weight,
-  //   });
-  // });
-
-  // // Create D3 force simulation
-  // const simulation = d3
-  //   .forceSimulation<
-  //     d3.SimulationNodeDatum & { id: number },
-  //     d3.SimulationLinkDatum<d3.SimulationNodeDatum & { id: number }>
-  //   >(nodes)
-  //   .force(
-  //     "link",
-  //     d3
-  //       .forceLink(links)
-  //       .id((d) => d.id)
-  //       // .strength((d) => d.weight)
-  //       .distance(100)
-  //   )
-  //   .force("charge", d3.forceManyBody().strength(-300))
-  //   .force("center", d3.forceCenter())
-  //   .force(
-  //     "collision",
-  //     d3.forceCollide().radius((d) => subgraphsboxs[d.index as number] + 2)
-  //   ); // Add padding between nodes
-
-  // console.log("Starting simulation for clustered layout");
-  // simulation.stop();
-  // for (let i = 0; i < 100; ++i) simulation.tick();
-  // console.log("Ending simulation for clustered layout");
+  // graph.forEachLink((link) => {graph.removeLink(link);});
+  // bestLinks.forEach((link) => {graph.addLink(link.fromId, link.toId, link.data);});
 
   const layout = createLayout(graph, {
     timeStep: 1,
@@ -253,6 +328,10 @@ function calculateClusteredLayout(
     springCoefficient: 0.8,
     gravity: -12,
     dragCoefficient: 0.9,
+  });
+  graph.forEachNode((node) => {
+    let body = layout.getBody(node.id);
+    body.mass = subgraphsnodecounts[node.id];
   });
   graph.forEachLink((link) => {
     const spring = layout.getSpring(link.fromId, link.toId);
@@ -262,13 +341,26 @@ function calculateClusteredLayout(
       console.warn("spring not found");
       return;
     }
-    spring.length = 550 + fromR + toR;
+    spring.length = 55 + fromR + toR;
   });
   for (let i = 0; i < 10000 && !layout.step(); i++) {
     if (i % 1000 === 0) {
       console.log(`Step: ${i}`);
     }
   }
+
+  // graph.forEachLink((link) => {
+  //   const spring = layout.getSpring(link.fromId, link.toId);
+  //   const fromR = subgraphsboxs[link.fromId as number];
+  //   const toR = subgraphsboxs[link.toId as number];
+  //   if (!spring) {
+  //     console.warn("spring not found");
+  //     return;
+  //   }
+  //   console.log("Spring from: ", link.fromId, " to: ", link.toId);
+  //   console.log("    Spring length: ", spring.length);
+  //   console.log("    Wanted length: ", 55 + fromR + toR);
+  // });
 
   const array: { x: number; y: number }[] = new Array(
     subgraphsboxs.length
@@ -277,13 +369,62 @@ function calculateClusteredLayout(
     array[parseInt(node.id.toString())] = layout.getNodePosition(node.id);
   });
 
-  // nodes.forEach((node) => {
-  //   array[parseInt(node.id.toString())] = { x: node.x, y: node.y };
-  // });
-
+  let intersections = findIntersectingCircles(array, subgraphsboxs);
+  graph.forEachLink((link) => {
+    const spring = layout.getSpring(link.fromId, link.toId);
+    const fromR = subgraphsboxs[link.fromId as number];
+    const toR = subgraphsboxs[link.toId as number];
+    if (!spring) {
+      console.warn("spring not found");
+      return;
+    }
+    console.log("Spring from: ", link.fromId, " to: ", link.toId);
+    console.log("    Spring length: ", spring.length);
+    console.log("    Wanted length: ", 55 + fromR + toR);
+  });
   return array;
 }
 
+function findIntersectingCircles(
+  coordinates: { x: number; y: number }[],
+  radii: number[]
+) {
+  const intersectingPairs = [];
+
+  // Check each pair of circles
+  for (let i = 0; i < coordinates.length; i++) {
+    for (let j = i + 1; j < coordinates.length; j++) {
+      const circle1 = coordinates[i];
+      const circle2 = coordinates[j];
+      const radius1 = radii[i];
+      const radius2 = radii[j];
+      if (radius1 == 0 || radius2 == 0) {
+        continue;
+      }
+      // Calculate distance between centers
+      const dx = circle2.x - circle1.x;
+      const dy = circle2.y - circle1.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Check if circles intersect
+      // Two circles intersect if the distance between centers is less than
+      // the sum of their radii (but greater than the absolute difference
+      // to avoid one circle being completely inside the other with no intersection)
+      const sumRadii = radius1 + radius2;
+      const diffRadii = Math.abs(radius1 - radius2);
+
+      if (distance <= sumRadii && distance >= diffRadii && distance > 0) {
+        intersectingPairs.push({
+          circle1: { index: i, x: circle1.x, y: circle1.y, radius: radius1 },
+          circle2: { index: j, x: circle2.x, y: circle2.y, radius: radius2 },
+          distance: distance,
+        });
+      }
+    }
+  }
+
+  return intersectingPairs;
+}
 function calculateLayout(
   graph: Graph<{ label: string; id: string; l: string }, { weight: number }>
 ): [
@@ -422,18 +563,17 @@ function writeVoronoi2(subgraphs: Graph<NodeData, LinkData>[]) {
     }
   );
 
-  let test4 = test2.map((t,i) => {
-    const neighbor : number[]= test2.map((n,j) => [n,j]).filter(n => turf.booleanIntersects(t,n[0])).map((n) => n[1]);
+  let test4 = test2.map((t, i) => {
+    const neighbor: number[] = test2
+      .map((n, j) => [n, j])
+      .filter((n) => turf.booleanIntersects(t, n[0]))
+      .map((n) => n[1]);
     const excludedColors = neigborColor
       .filter((t) => neighbor.includes(t[0]))
       .map((t) => t[1]);
     const color = getRandomColor(excludedColors);
     neigborColor.push([i, color]);
-    return computeGeoFeature(
-      t?.geometry.coordinates[0],
-      color,
-      i
-    );
+    return computeGeoFeature(t?.geometry.coordinates[0], color, i);
   });
   // const test = [...voronoi.cellPolygons()].map(function (point) {
   //   const neighbor = [...voronoi.neighbors(point.index)];
