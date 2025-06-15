@@ -84,7 +84,7 @@ app.get("/render", (_req, res) => {
   const subgraphsboxs: [number] = new Array(graphFiles).fill(0);
 
   const subgraphsnodecounts: [number] = new Array(graphFiles).fill(0);
-  const graphToInclude = 8;
+  const graphToInclude = 39;
   for (let i = graphFiles - graphToInclude; i < graphFiles; i++) {
     const graph: Graph<
       { label: string; id: string; l: string },
@@ -117,15 +117,15 @@ app.get("/render", (_req, res) => {
     // });
     clusterGraph.removeNode(i);
   }
-  // const clusterLayout2 = calculateClusteredLayout(
-  //   clusterGraph,
-  //   subgraphsboxs,
-  //   subgraphsnodecounts
-  // );
+  const clusterLayouttemp = calculateClusteredLayout(
+    clusterGraph,
+    subgraphsboxs,
+    subgraphsnodecounts
+  );
   const clusterLayout = calculateClusteredLayoutTest(
     clusterGraph,
     subgraphsboxs,
-    subgraphsnodecounts,graphFiles - graphToInclude
+    subgraphsnodecounts,graphFiles - graphToInclude, clusterLayouttemp
   );
   for (let i = 0; i < graphToInclude; i++) {
     const offset = clusterLayout[i + graphFiles - graphToInclude];
@@ -213,7 +213,10 @@ function applyOffset(
 function calculateClusteredLayoutTest(
   graph: Graph<{ label: string; id: string; l: string }, { weight: number }>,
   subgraphsboxs: [number],
-  subgraphsnodecounts: [number],offset:number
+  subgraphsnodecounts: [number],offset:number,firstLayout: {
+    x: number;
+    y: number;
+}[]
 ): { x: number; y: number }[] {
   let nodes: Node<{ id: string }>[] = [];
   graph.forEachNode((node) => {
@@ -229,60 +232,32 @@ function calculateClusteredLayoutTest(
     });
   });
 
-  return calculateClusteredLayoutClaude(nodes, links, subgraphsboxs, offset);
+  return calculateClusteredLayoutClaude(nodes, links, subgraphsboxs, offset, firstLayout);
 }
 
 function calculateClusteredLayoutClaude(
   nodes: Node<{ id: string }>[],
   links: { fromId: NodeId; toId: NodeId; data: { weight: number } }[],
-  nodeRadius: [number], offset:number
+  nodeRadius: [number], offset:number,firstLayout: {
+    x: number;
+    y: number;
+}[]
 ): { x: number; y: number }[] {
   // Create D3 nodes with radius information
   const d3Nodes = nodes.map((node, i) => ({
     id: node.data.id,
     index: i,
     radius: nodeRadius[i + offset],
-    x: Math.random() * 400, // Initial random position
-    y: Math.random() * 400,
+    x: firstLayout[i + offset].x,
+    y: firstLayout[i + offset].y,
   }));
 
-  // Create D3 links with weight information
-  const d3Links = links
-    .map((link) => ({
-      source: d3Nodes.find((n) => n.id === link.fromId),
-      target: d3Nodes.find((n) => n.id === link.toId),
-      weight: link.data.weight,
-    }))
-    .filter((link) => link.source && link.target); // Filter out invalid links
-
   // Create force simulation
-  const simulation = d3
-    .forceSimulation(d3Nodes)
-    .force(
-      "link",
-      d3
-        .forceLink(d3Links)
-        .id((d) => d.id)
-        //.distance((d) => d.source.radius + d.target.radius + 10)
-        .strength((d) => d.weight*10)
+  const simulation = d3.forceSimulation(d3Nodes)
+    .force('collision', d3.forceCollide()
+      .radius(d => d.radius + 2) // Add small padding
+      .strength(0.9).iterations(50)
     )
-    .force(
-      "charge",
-      d3.forceManyBody().strength((d) => {
-        return -5;
-      })
-    )
-    .force(
-      "collision",
-      d3
-        .forceCollide()
-        .radius((d) => d.radius + 2) // Add small padding
-        .strength(0.9)
-    )
-    .force("center", d3.forceCenter(200, 200))
-    .force("x", d3.forceX(200).strength(0.1))
-    .force("y", d3.forceY(200).strength(0.1));
-
   // Run simulation for a fixed number of iterations
   const numIterations = 3000;
   for (let i = 0; i < numIterations; i++) {
@@ -307,20 +282,20 @@ function calculateClusteredLayout(
   subgraphsboxs: [number],
   subgraphsnodecounts: [number]
 ): { x: number; y: number }[] {
-  // const bestLinks: any[] = [];
+  const bestLinks: any[] = [];
 
-  // graph.forEachNode((node) => {
-  //   let nodeLinks = node.links;
-  //   nodeLinks.sort((a, b) => b.data.weight - a.data.weight);
-  //   if (nodeLinks.length > 0) {
-  //     bestLinks.push(nodeLinks[0]);
-  //   }
-  //   if (nodeLinks.length > 1) {
-  //     bestLinks.push(nodeLinks[1]);
-  //   }
-  // });
-  // graph.forEachLink((link) => {graph.removeLink(link);});
-  // bestLinks.forEach((link) => {graph.addLink(link.fromId, link.toId, link.data);});
+  graph.forEachNode((node) => {
+    let nodeLinks = node.links;
+    nodeLinks.sort((a, b) => b.data.weight - a.data.weight);
+    if (nodeLinks.length > 0) {
+      bestLinks.push(nodeLinks[0]);
+    }
+    if (nodeLinks.length > 1) {
+      bestLinks.push(nodeLinks[1]);
+    }
+  });
+  graph.forEachLink((link) => {graph.removeLink(link);});
+  bestLinks.forEach((link) => {graph.addLink(link.fromId, link.toId, link.data);});
 
   const layout = createLayout(graph, {
     timeStep: 1,
