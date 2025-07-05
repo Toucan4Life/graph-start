@@ -9,8 +9,10 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
   },
   "dependencies": {
+    "@turf/turf": "^7.2.0",
     "axios": "^1.6.8",
     "buffer-split": "^1.0.0",
+    "d3": "^7.9.0",
     "d3-geo-voronoi": "^2.1.0",
     "miserables": "^2.0.0",
     "ngraph.coarsen": "^1.5.0",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",
+    "@types/d3": "^7.4.3",
     "@vitejs/plugin-vue": "^2.3.1",
     "eslint": "^8.57.1",
     "eslint-plugin-vue": "^8.7.1",

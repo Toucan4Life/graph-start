@@ -58,7 +58,8 @@ export default function createGraphScene(canvas) {
     reattachNode,
     cut,
     ship,
-    pin
+    pin,
+    knn
   };
 
   function loadGraph(newGraph) {
@@ -156,6 +157,57 @@ export default function createGraphScene(canvas) {
     scene = initScene();
     initUIElements(false);
     console.log("cutting done")
+  }
+
+  function knn() {
+      const bestLinks = [];
+
+  graph.forEachNode((node) => {
+    let nodeLinks = node.links;
+    nodeLinks.sort((a, b) => b.data.weight - a.data.weight);
+    if (nodeLinks.length > 0) {
+      bestLinks.push(nodeLinks[0]);
+    }
+    if (nodeLinks.length > 1) {
+      bestLinks.push(nodeLinks[1]);
+    }
+  });
+  graph.clear()
+
+  const uniqueLinks = new Map();
+  bestLinks.forEach(link => {
+    const key = `${link.fromId}-${link.toId}`;
+    const reverseKey = `${link.toId}-${link.fromId}`;
+    if (!uniqueLinks.has(key) && !uniqueLinks.has(reverseKey)) {
+      uniqueLinks.set(key, link);
+    }
+  });
+  bestLinks.length = 0;
+
+  uniqueLinks.forEach(link => bestLinks.push(link));
+  bestLinks.forEach((link) => {graph.addLink(link.fromId, link.toId, link.data);});
+
+    graph.forEachLink(link => {
+      var from = layout.getNodePosition(link.fromId);
+      var to = layout.getNodePosition(link.toId);
+      var line = { from: [from.x, from.y, from.z || 0], to: [to.x, to.y, to.z || 0], color: 0xFFFFFF10 };
+      link.ui = line;
+      link.uiId = lines.add(link.ui);
+    });
+        graph.forEachNode(node => {
+      var point = layout.getNodePosition(node.id);
+      let size = 1;
+      if (node.data && node.data.size) {
+        size = node.data.size;
+      } else {
+        if (!node.data) node.data = {};
+        node.data.size = size;
+      }
+
+      size = 1;
+   node.ui = { size, position: [point.x, point.y, point.z || 0], color: 0x90f8fcff }; 
+      node.uiId = nodes.add(node.ui);
+    });
   }
 
   function coarsenGraph(interdist) {
@@ -463,7 +515,7 @@ export default function createGraphScene(canvas) {
         text,
         x: node.ui.position[0],
         y: node.ui.position[1] - node.ui.size / 2,
-        limit: node.ui.size,
+        limit: 4,
         cx: 0.5
       });
     });

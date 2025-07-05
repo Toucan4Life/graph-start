@@ -16,6 +16,9 @@ export default {
   },
 
   methods: {
+    knn(){
+      this.scene.knn();
+    },
     runLayout() {
       this.scene.runLayout(this.stepCount);
     },
@@ -60,6 +63,7 @@ export default {
 </script>
 
 <template>
+  <a href="#" @click.prevent='knn' class='btn-command'>KNN</a>
   <a href="#" @click.prevent='runLayout' class='btn-command'>Toggle simulation</a>
   <a href="#" @click.prevent='toggleLabel' class='btn-command'>Toggle Label</a>
   <a href="#" @click.prevent='toggleLink' class='btn-command'>Toggle Link</a>

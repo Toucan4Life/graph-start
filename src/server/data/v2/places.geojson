@@ -1,0 +1,117 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          80.093,
+          8.22
+        ]
+      },
+      "properties": {
+        "symbolzoom": 3,
+        "name": "Solo Wargame",
+        "labelId": "hrv",
+        "ownerId": 35
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.626,
+          20.27
+        ]
+      },
+      "properties": {
+        "symbolzoom": 3,
+        "name": "Deduction",
+        "labelId": "dcz",
+        "ownerId": 25
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          34.647,
+          5.552
+        ]
+      },
+      "properties": {
+        "symbolzoom": 3,
+        "name": "CCG & Miniatures",
+        "labelId": "29i",
+        "ownerId": 23
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -12.2,
+          27.172
+        ]
+      },
+      "properties": {
+        "symbolzoom": 3,
+        "name": "Economic",
+        "labelId": "kj4",
+        "ownerId": 34
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -47.979,
+          -42.097
+        ]
+      },
+      "properties": {
+        "symbolzoom": 3,
+        "name": "Solo",
+        "labelId": "t7o",
+        "ownerId": 19
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -21.597,
+          17.806
+        ]
+      },
+      "properties": {
+        "symbolzoom": 3,
+        "name": "East Asia",
+        "labelId": "aid",
+        "ownerId": 31
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -13.534,
+          -41.652
+        ]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "For Kids",
+        "labelId": "95r",
+        "ownerId": 3
+      }
+    }
+  ]
+}
