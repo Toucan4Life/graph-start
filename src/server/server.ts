@@ -11,7 +11,7 @@ import createLayout, { Layout } from "ngraph.forcelayout";
 import { parse } from "csv-parse/sync";
 import * as d3 from "d3";
 import * as turf from "@turf/turf";
-
+import { gen4col } from "./four_color";
 const app = express();
 const port = 3010;
 
@@ -84,7 +84,8 @@ app.get("/render", (_req, res) => {
   const subgraphsboxs: [number] = new Array(graphFiles).fill(0);
 
   const subgraphsnodecounts: [number] = new Array(graphFiles).fill(0);
-  const graphToInclude = 39;
+  const graphToInclude = 37;
+  //  const graphToInclude = 8;
   for (let i = graphFiles - graphToInclude; i < graphFiles; i++) {
     const graph: Graph<
       { label: string; id: string; l: string },
@@ -125,7 +126,9 @@ app.get("/render", (_req, res) => {
   const clusterLayout = calculateClusteredLayoutTest(
     clusterGraph,
     subgraphsboxs,
-    subgraphsnodecounts,graphFiles - graphToInclude, clusterLayouttemp
+    subgraphsnodecounts,
+    graphFiles - graphToInclude,
+    clusterLayouttemp
   );
   for (let i = 0; i < graphToInclude; i++) {
     const offset = clusterLayout[i + graphFiles - graphToInclude];
@@ -213,10 +216,12 @@ function applyOffset(
 function calculateClusteredLayoutTest(
   graph: Graph<{ label: string; id: string; l: string }, { weight: number }>,
   subgraphsboxs: [number],
-  subgraphsnodecounts: [number],offset:number,firstLayout: {
+  subgraphsnodecounts: [number],
+  offset: number,
+  firstLayout: {
     x: number;
     y: number;
-}[]
+  }[]
 ): { x: number; y: number }[] {
   let nodes: Node<{ id: string }>[] = [];
   graph.forEachNode((node) => {
@@ -232,16 +237,24 @@ function calculateClusteredLayoutTest(
     });
   });
 
-  return calculateClusteredLayoutClaude(nodes, links, subgraphsboxs, offset, firstLayout);
+  return calculateClusteredLayoutClaude(
+    nodes,
+    links,
+    subgraphsboxs,
+    offset,
+    firstLayout
+  );
 }
 
 function calculateClusteredLayoutClaude(
   nodes: Node<{ id: string }>[],
   links: { fromId: NodeId; toId: NodeId; data: { weight: number } }[],
-  nodeRadius: [number], offset:number,firstLayout: {
+  nodeRadius: [number],
+  offset: number,
+  firstLayout: {
     x: number;
     y: number;
-}[]
+  }[]
 ): { x: number; y: number }[] {
   // Create D3 nodes with radius information
   const d3Nodes = nodes.map((node, i) => ({
@@ -253,11 +266,14 @@ function calculateClusteredLayoutClaude(
   }));
 
   // Create force simulation
-  const simulation = d3.forceSimulation(d3Nodes)
-    .force('collision', d3.forceCollide()
-      .radius(d => d.radius + 2) // Add small padding
-      .strength(0.9).iterations(50)
-    )
+  const simulation = d3.forceSimulation(d3Nodes).force(
+    "collision",
+    d3
+      .forceCollide()
+      .radius((d) => d.radius + 2) // Add small padding
+      .strength(0.9)
+      .iterations(50)
+  );
   // Run simulation for a fixed number of iterations
   const numIterations = 3000;
   for (let i = 0; i < numIterations; i++) {
@@ -278,11 +294,20 @@ function calculateClusteredLayoutClaude(
 }
 
 function calculateClusteredLayout(
-  graph: Graph<{ label: string; id: string; l: string }, { weight: number }>,
+  graphori: Graph<{ label: string; id: string; l: string }, { weight: number }>,
   subgraphsboxs: [number],
   subgraphsnodecounts: [number]
 ): { x: number; y: number }[] {
-  const bestLinks: any[] = [];
+  // Create a copy of the graph to avoid modifying the original
+  let graph = createGraph();
+  graphori.forEachNode((node) => {
+    graph.addNode(node.id, node.data);
+  });
+  graphori.forEachLink((link) => {
+    graph.addLink(link.fromId, link.toId, link.data);
+  });
+
+  const bestLinks = [];
 
   graph.forEachNode((node) => {
     let nodeLinks = node.links;
@@ -294,8 +319,22 @@ function calculateClusteredLayout(
       bestLinks.push(nodeLinks[1]);
     }
   });
-  graph.forEachLink((link) => {graph.removeLink(link);});
-  bestLinks.forEach((link) => {graph.addLink(link.fromId, link.toId, link.data);});
+  graph.clear();
+
+  const uniqueLinks = new Map();
+  bestLinks.forEach((link) => {
+    const key = `${link.fromId}-${link.toId}`;
+    const reverseKey = `${link.toId}-${link.fromId}`;
+    if (!uniqueLinks.has(key) && !uniqueLinks.has(reverseKey)) {
+      uniqueLinks.set(key, link);
+    }
+  });
+  bestLinks.length = 0;
+
+  uniqueLinks.forEach((link) => bestLinks.push(link));
+  bestLinks.forEach((link) => {
+    graph.addLink(link.fromId, link.toId, link.data);
+  });
 
   const layout = createLayout(graph, {
     timeStep: 1,
@@ -353,9 +392,9 @@ function calculateClusteredLayout(
       console.warn("spring not found");
       return;
     }
-    console.log("Spring from: ", link.fromId, " to: ", link.toId);
-    console.log("    Spring length: ", spring.length);
-    console.log("    Wanted length: ", 55 + fromR + toR);
+    // console.log("Spring from: ", link.fromId, " to: ", link.toId);
+    // console.log("    Spring length: ", spring.length);
+    // console.log("    Wanted length: ", 55 + fromR + toR);
   });
   return array;
 }
@@ -538,18 +577,36 @@ function writeVoronoi2(subgraphs: Graph<NodeData, LinkData>[]) {
     }
   );
 
-  let test4 = test2.map((t, i) => {
+  // let test4 = test2.map((t, i) => {
+  //   const neighbor: number[] = test2
+  //     .map((n, j) => [n, j])
+  //     .filter((n) => turf.booleanIntersects(t, n[0]))
+  //     .map((n) => n[1]);
+  //   const excludedColors = neigborColor
+  //     .filter((t) => neighbor.includes(t[0]))
+  //     .map((t) => t[1]);
+  //   const color = getRandomColor(excludedColors);
+  //   neigborColor.push([i, color]);
+  //   return computeGeoFeature(t?.geometry.coordinates[0], color, i);
+  // });
+
+  let test4input = test2.map((t, i) => {
+    // Build adjacency list for gen4col
     const neighbor: number[] = test2
       .map((n, j) => [n, j])
       .filter((n) => turf.booleanIntersects(t, n[0]))
       .map((n) => n[1]);
-    const excludedColors = neigborColor
-      .filter((t) => neighbor.includes(t[0]))
-      .map((t) => t[1]);
-    const color = getRandomColor(excludedColors);
-    neigborColor.push([i, color]);
-    return computeGeoFeature(t?.geometry.coordinates[0], color, i);
+    return neighbor;
   });
+
+
+const coloring: number[] = gen4col(test4input, true) as number[];
+
+const colorPalette = ["#516ebc", "#153477", "#00529c", "#37009c"];
+let test4 = test2.map((t, i) => {
+  const color = colorPalette[coloring[i] % colorPalette.length];
+  return computeGeoFeature(t?.geometry.coordinates[0], color, i);
+});
   // const test = [...voronoi.cellPolygons()].map(function (point) {
   //   const neighbor = [...voronoi.neighbors(point.index)];
   //   const excludedColors = neigborColor
@@ -684,6 +741,7 @@ function writeGeojson() {
         bayes_rating: string;
         id: string;
         parent: number;
+        year:string
       };
     }[];
   } = { type: "FeatureCollection", features: [] };
@@ -709,11 +767,12 @@ function writeGeojson() {
         max_players_best: point[1].data.max_players_best,
         min_time: point[1].data.min_time,
         max_time: point[1].data.max_time,
-        category: point[1].data.category,
-        mechanic: point[1].data.mechanic,
+        // category: point[1].data.category,
+        // mechanic: point[1].data.mechanic,
         bayes_rating: point[1].data.bayes_rating,
         id: point[1].data.id,
         parent: point[0],
+        year: point[1].data.year,
       },
     };
 
@@ -785,11 +844,21 @@ function enrichGraphs(
   });
   const map = new Map(records.map((key) => [key["bgg_id"], key]));
 
-  subgraphs.forEach((subgraph) =>
+  subgraphs.forEach(function (subgraph) {
+    let sum_size = 0.0;
     subgraph.forEachNode((node) => {
       const row = map.get(node.data.id.toString());
       if (!row) return;
-      node.data.size = row["num_votes"];
+      const parsedValue = parseInt(row["num_votes"], 10);
+      if (isNaN(parsedValue)) {
+        console.log("Failed to parse num_votes:", row["num_votes"]," for ID:", node.data.id.toString());
+      }
+      sum_size = sum_size + (parsedValue || 0);
+    });
+    return subgraph.forEachNode((node) => {
+      const row = map.get(node.data.id.toString());
+      if (!row) return;
+      node.data.size = ((parseInt(row["num_votes"])|| 0) / sum_size).toString();
       node.data.rating = row["avg_rating"];
       node.data.complexity = row["complexity"];
       node.data.min_players = row["min_players"];
@@ -800,11 +869,12 @@ function enrichGraphs(
       node.data.max_players_best = row["max_players_best"];
       node.data.min_time = row["min_time"];
       node.data.max_time = row["max_time"];
-      node.data.category = row["category"];
-      node.data.mechanic = row["mechanic"];
+      // node.data.category = row["category"];
+      // node.data.mechanic = row["mechanic"];
       node.data.bayes_rating = row["bayes_rating"];
-    })
-  );
+      node.data.year = row["year"];
+    });
+  });
 
   return subgraphs;
 }
@@ -863,6 +933,7 @@ interface GameRecord {
   category: string;
   mechanic: string;
   bayes_rating: string;
+  year:string;
 }
 interface Game {
   Name: string;
@@ -889,6 +960,7 @@ interface NodeData {
   id: string;
   l: string;
   label: string;
+  year:string
 }
 interface LinkData {
   weight: number;
