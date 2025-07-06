@@ -4,7 +4,7 @@ import fs from "fs";
 import serveIndex from "serve-index";
 import path from "path";
 import fromDot from "ngraph.fromdot";
-import createGraph, { Graph, Node, NodeId } from "ngraph.graph";
+import createGraph, { Graph, Link, Node, NodeId } from "ngraph.graph";
 import toDot from "ngraph.todot";
 import * as d from "d3-delaunay";
 import createLayout, { Layout } from "ngraph.forcelayout";
@@ -12,50 +12,26 @@ import { parse } from "csv-parse/sync";
 import * as d3 from "d3";
 import * as turf from "@turf/turf";
 import { gen4col } from "./four_color";
-const app = express();
-const port = 3010;
-
-// Add headers before the routes are defined
-app.use(cors());
-
 import { fileURLToPath } from "url";
 import { join } from "path";
 import { execSync } from "child_process";
-import { Console } from "console";
+
+const app = express();
+const port = 3010;
+app.use(cors());
 
 const __filename = fileURLToPath(import.meta.url);
-
 const __dirname = path.dirname(__filename);
-
 const htmlPath = path.join(__dirname, "data");
 app.use("/data", serveIndex(htmlPath));
 app.use("/data", express.static(htmlPath));
 
-app.get("/", (_req, res) => {
-  res.send("Hello World!");
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`);
 });
 
-app.post("/ship", (r, s) => {
-  let body = "";
-  r.on("readable", function () {
-    body += r.read();
-  });
-  r.on("end", function () {
-    console.log("starting");
-    const subgraphsjson = JSON.parse(body.slice(0, -4));
-    let subgraphs: Graph<NodeData, LinkData>[] = subgraphsjson.map(
-      (subgraphjson: string) => fromDot(subgraphjson)
-    );
-    subgraphs = changeIdToLabel(subgraphs);
-    subgraphs = enrichGraphs(subgraphs);
-    writeGraphs(subgraphs);
-    writeNames(subgraphs, groupByName);
-    writeGeojson();
-    writeVoronoi(subgraphs);
-    console.log("done");
-    s.write("OK");
-    s.end();
-  });
+app.get("/", (_req, res) => {
+  res.send("Hello World!");
 });
 
 app.get("/render", (_req, res) => {
@@ -77,20 +53,99 @@ app.get("/render", (_req, res) => {
     }
   });
 
-  let subgraphs: Graph<NodeData, LinkData>[] = [];
-  const graphFiles =
-    fs.readdirSync("./graph").filter((file) => file.endsWith(".dot")).length -
-    1; // Exclude the clustered_graph.dot file
-  const subgraphsboxs: [number] = new Array(graphFiles).fill(0);
-
-  const subgraphsnodecounts: [number] = new Array(graphFiles).fill(0);
   const graphToInclude = 37;
-  //  const graphToInclude = 8;
+  // Exclude the clustered_graph.dot file
+  const numberOfGraphs: number =
+    fs.readdirSync("./graph").filter((file) => file.endsWith(".dot")).length -
+    1;
+
+  const inputSubgraphs = [];
+  for (let i = numberOfGraphs - graphToInclude; i <= numberOfGraphs - 1; i++) {
+    const graph: Graph<NodeInputData, LinkData> = fromDot(
+      fs.readFileSync("./graph/subgraph_" + i + ".dot").toString()
+    );
+    inputSubgraphs.push(graph);
+  }
+
+  const clusterGraph: Graph<NodeInputData, LinkData> = fromDot(
+    fs.readFileSync("./graph/clustered_graph.dot").toString()
+  );
+
+  const subgraphs = createSubgraphCluster(
+    numberOfGraphs,
+    inputSubgraphs,
+    clusterGraph,
+    graphToInclude
+  );
+
+  subgraphs.forEach((subgraph, i) => {
+    try {
+      fs.writeFileSync(
+        join("data", "v2", "graphs", `${i}.dot`),
+        toDot(subgraph)
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  const arrays = computeSearchIndexes(subgraphs, groupByName);
+  arrays.forEach((gamelist) => {
+    fs.writeFileSync(
+      join("data", "v2", "names", gamelist[0].Name[0].toLowerCase() + ".json"),
+      JSON.stringify(
+        gamelist.map((element) => [
+          element.Name,
+          parseFloat(element.x),
+          parseFloat(element.y),
+          element.id,
+        ])
+      )
+    );
+  });
+
+  const mygeojson = writeGeojson(subgraphs);
+  try {
+    fs.writeFileSync(
+      "./data/v2/geojson/points.geojson",
+      JSON.stringify(mygeojson)
+    );
+  } catch (e) {
+    console.log(e);
+  }
+
+  execSync(
+    "tippecanoe --no-tile-compression -zg --drop-densest-as-needed --extend-zooms-if-still-dropping --output-to-directory data/v2/points data/v2/geojson/points.geojson --force"
+  );
+
+  const voronoiGeoJson = writeVoronoi2(subgraphs);
+  try {
+    fs.writeFileSync(
+      "./data/v2/borders.geojson",
+      JSON.stringify(voronoiGeoJson)
+    );
+  } catch (e) {
+    console.log(e);
+  }
+
+  res.send("Done Rendering");
+});
+
+function createSubgraphCluster(
+  graphFiles: number,
+  inputSubgraphs: Graph<NodeInputData, LinkData>[],
+  inputClusterGraph: Graph<NodeInputData, LinkData>,
+  graphToInclude: number
+): Graph<NodeData, LinkData>[] {
+  let subgraphs: Graph<NodeInputData, LinkData>[] = [];
+  const subgraphsboxs: number[] = new Array(graphFiles).fill(0);
+  const subgraphsnodecounts: number[] = new Array(graphFiles).fill(0);
+  let j = 0;
   for (let i = graphFiles - graphToInclude; i < graphFiles; i++) {
     const graph: Graph<
       { label: string; id: string; l: string },
       { weight: number }
-    > = fromDot(fs.readFileSync("./graph/subgraph_" + i + ".dot").toString());
+    > = inputSubgraphs[j];
 
     const graphAndLayout = calculateLayout(graph);
     const GraphRect = graphAndLayout[1].getGraphRect();
@@ -101,21 +156,14 @@ app.get("/render", (_req, res) => {
       ) / 2;
     subgraphsnodecounts[i] = graph.getNodesCount();
     subgraphs.push(graphAndLayout[0]);
+    j = j + 1;
   }
 
   const clusterGraph: Graph<
     { label: string; id: string; l: string },
     { weight: number }
-  > = fromDot(fs.readFileSync("./graph/clustered_graph.dot").toString());
+  > = inputClusterGraph;
   for (let i = 0; i < graphFiles - graphToInclude; i++) {
-    // const links = clusterGraph.getLinks(i);
-    // if (links === null) {
-    //   console.warn(`No links found for node ${i}`);
-    //   continue;
-    // }
-    // links.forEach((link) => {
-    //   clusterGraph.removeLink(link);
-    // });
     clusterGraph.removeNode(i);
   }
   const clusterLayouttemp = calculateClusteredLayout(
@@ -130,14 +178,13 @@ app.get("/render", (_req, res) => {
     graphFiles - graphToInclude,
     clusterLayouttemp
   );
+
   for (let i = 0; i < graphToInclude; i++) {
     const offset = clusterLayout[i + graphFiles - graphToInclude];
-    const g = subgraphs[i];
-    let newG = applyOffset(g, offset, {
+    subgraphs[i] = applyOffset(subgraphs[i], offset, {
       x: 1,
       y: 1,
     });
-    subgraphs[i] = newG;
   }
 
   const nodes = subgraphs.flatMap((subgraph) => {
@@ -168,41 +215,19 @@ app.get("/render", (_req, res) => {
   };
 
   for (let i = 0; i < graphToInclude; i++) {
-    const g = subgraphs[i];
-    let newG = applyOffset(g, offset, factor);
-    subgraphs[i] = newG;
+    subgraphs[i] = applyOffset(subgraphs[i], offset, factor);
   }
 
   subgraphs = changeIdToLabel(subgraphs);
-  subgraphs = enrichGraphs(subgraphs);
-  writeGraphs(subgraphs);
-  writeNames(subgraphs, groupByName);
-  writeGeojson();
-
-  const voronoiPoints: {
-    x: number;
-    y: number;
-  }[] = clusterLayout.slice(-graphToInclude).map((pos) => {
-    pos.x = (pos.x + offset.x) / factor.x;
-    pos.y = (pos.y + offset.y) / factor.y;
-    return pos;
-  });
-  //writeVoronoi(voronoiPoints);
-  writeVoronoi2(subgraphs);
-  // const dottedgraph = toDot(graph);
-  // fs.writeFileSync("./graph_layout/subgraph_1.dot", dottedgraph, { flag: "w" });
-  res.send("Done Rendering");
-});
-
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-});
+  const enrichedSubgraphs = enrichGraphs(subgraphs);
+  return enrichedSubgraphs;
+}
 
 function applyOffset(
-  graph: Graph<{ label: string; id: number; l: string }, { weight: number }>,
+  graph: Graph<NodeInputData, LinkData>,
   offset: { x: number; y: number },
   factor: { x: number; y: number }
-): Graph<{ label: string; id: number; l: string }, { weight: number }> {
+): Graph<NodeInputData, LinkData> {
   graph.forEachNode((node) => {
     const pos = node.data.l
       .split(",")
@@ -213,10 +238,11 @@ function applyOffset(
 
   return graph;
 }
+
 function calculateClusteredLayoutTest(
   graph: Graph<{ label: string; id: string; l: string }, { weight: number }>,
-  subgraphsboxs: [number],
-  subgraphsnodecounts: [number],
+  subgraphsboxs: number[],
+  subgraphsnodecounts: number[],
   offset: number,
   firstLayout: {
     x: number;
@@ -295,8 +321,8 @@ function calculateClusteredLayoutClaude(
 
 function calculateClusteredLayout(
   graphori: Graph<{ label: string; id: string; l: string }, { weight: number }>,
-  subgraphsboxs: [number],
-  subgraphsnodecounts: [number]
+  subgraphsboxs: number[],
+  subgraphsnodecounts: number[]
 ): { x: number; y: number }[] {
   // Create a copy of the graph to avoid modifying the original
   let graph = createGraph();
@@ -308,15 +334,16 @@ function calculateClusteredLayout(
   });
 
   const bestLinks = [];
-
   graph.forEachNode((node) => {
     let nodeLinks = node.links;
-    nodeLinks.sort((a, b) => b.data.weight - a.data.weight);
-    if (nodeLinks.length > 0) {
-      bestLinks.push(nodeLinks[0]);
-    }
-    if (nodeLinks.length > 1) {
-      bestLinks.push(nodeLinks[1]);
+    if (nodeLinks != null) {
+      nodeLinks.sort((a, b) => b.data.weight - a.data.weight);
+      if (nodeLinks.length > 0) {
+        bestLinks.push(nodeLinks[0]);
+      }
+      if (nodeLinks.length > 1) {
+        bestLinks.push(nodeLinks[1]);
+      }
     }
   });
   graph.clear();
@@ -439,6 +466,7 @@ function findIntersectingCircles(
 
   return intersectingPairs;
 }
+
 function calculateLayout(
   graph: Graph<{ label: string; id: string; l: string }, { weight: number }>
 ): [
@@ -466,27 +494,7 @@ function calculateLayout(
   return [graph, layout];
 }
 
-function writeGraphs(subgraphs: Graph<NodeData, LinkData>[]) {
-  let i = 0;
-  subgraphs.forEach((subgraph) => {
-    // subgraph.forEachLink(link => {
-    //   link.data.fromId = subgraph.getNode(link.fromId).data.label
-    //   link.data.toId = subgraph.getNode(link.toId).data.label
-    // })
-    try {
-      fs.writeFileSync(
-        join("data", "v2", "graphs", i + ".dot"),
-        toDot(subgraph)
-      );
-      // file written successfully
-      i = i + 1;
-    } catch (err) {
-      console.error(err);
-    }
-  });
-}
-
-function writeNames(
+function computeSearchIndexes(
   subgraphs: Graph<NodeData, LinkData>[],
   groupByName: { (strings: Game[]): Game[][] }
 ) {
@@ -507,21 +515,10 @@ function writeNames(
       }
     });
   });
-  const arrays = groupByName(namesArray);
-  arrays.forEach((gamelist) => {
-    fs.writeFileSync(
-      join("data", "v2", "names", gamelist[0].Name[0].toLowerCase() + ".json"),
-      JSON.stringify(
-        gamelist.map((element) => [
-          element.Name,
-          parseFloat(element.x),
-          parseFloat(element.y),
-          element.id,
-        ])
-      )
-    );
-  });
+
+  return groupByName(namesArray);
 }
+
 function writeVoronoi2(subgraphs: Graph<NodeData, LinkData>[]) {
   const nodes: {
     x: number;
@@ -577,19 +574,6 @@ function writeVoronoi2(subgraphs: Graph<NodeData, LinkData>[]) {
     }
   );
 
-  // let test4 = test2.map((t, i) => {
-  //   const neighbor: number[] = test2
-  //     .map((n, j) => [n, j])
-  //     .filter((n) => turf.booleanIntersects(t, n[0]))
-  //     .map((n) => n[1]);
-  //   const excludedColors = neigborColor
-  //     .filter((t) => neighbor.includes(t[0]))
-  //     .map((t) => t[1]);
-  //   const color = getRandomColor(excludedColors);
-  //   neigborColor.push([i, color]);
-  //   return computeGeoFeature(t?.geometry.coordinates[0], color, i);
-  // });
-
   let test4input = test2.map((t, i) => {
     // Build adjacency list for gen4col
     const neighbor: number[] = test2
@@ -599,23 +583,13 @@ function writeVoronoi2(subgraphs: Graph<NodeData, LinkData>[]) {
     return neighbor;
   });
 
+  const coloring: number[] = gen4col(test4input, true) as number[];
 
-const coloring: number[] = gen4col(test4input, true) as number[];
-
-const colorPalette = ["#516ebc", "#153477", "#00529c", "#37009c"];
-let test4 = test2.map((t, i) => {
-  const color = colorPalette[coloring[i] % colorPalette.length];
-  return computeGeoFeature(t?.geometry.coordinates[0], color, i);
-});
-  // const test = [...voronoi.cellPolygons()].map(function (point) {
-  //   const neighbor = [...voronoi.neighbors(point.index)];
-  //   const excludedColors = neigborColor
-  //     .filter((t) => neighbor.includes(t[0]))
-  //     .map((t) => t[1]);
-  //   const color = getRandomColor(excludedColors);
-  //   neigborColor.push([point.index, color]);
-  //   return computeGeoFeature(point, color);
-  // });
+  const colorPalette = ["#516ebc", "#153477", "#00529c", "#37009c"];
+  let test4 = test2.map((t, i) => {
+    const color = colorPalette[coloring[i] % colorPalette.length];
+    return computeGeoFeature(t?.geometry.coordinates[0], color, i);
+  });
 
   const mygeojson: {
     type: string;
@@ -627,11 +601,8 @@ let test4 = test2.map((t, i) => {
     }[];
   } = { type: "FeatureCollection", features: [] };
   mygeojson.features = test4;
-  try {
-    fs.writeFileSync("./data/v2/borders.geojson", JSON.stringify(mygeojson));
-  } catch (e) {
-    console.log(e);
-  }
+
+  return mygeojson;
 
   function computeGeoFeature(
     point: d.Delaunay.Polygon & { index: number },
@@ -657,64 +628,11 @@ let test4 = test2.map((t, i) => {
   }
 }
 
-function writeVoronoi(points: { x: number; y: number }[]) {
-  const newLocal: [number, number][] = points.map((p) => [p.x, p.y]);
-  //console.log(JSON.stringify(newLocal))
-
-  const delaunay = d.Delaunay.from(newLocal);
-  const voronoi = delaunay.voronoi([-90, -45, 90, 45]);
-  const neigborColor: [number, string][] = [];
-  const test = [...voronoi.cellPolygons()].map(function (point) {
-    const neighbor = [...voronoi.neighbors(point.index)];
-    const excludedColors = neigborColor
-      .filter((t) => neighbor.includes(t[0]))
-      .map((t) => t[1]);
-    const color = getRandomColor(excludedColors);
-    neigborColor.push([point.index, color]);
-    return {
-      type: "Feature",
-      id: newLocal
-        .map((node) => voronoi.contains(point.index, node[0], node[1]))
-        .findIndex((element) => element),
-      geometry: {
-        type: "Polygon",
-        coordinates: [point as [number, number][]],
-      },
-      properties: {
-        fill: color,
-      },
-    };
-  });
-
-  const mygeojson: {
-    type: string;
-    features: {
-      type: string;
-      id: number;
-      geometry: { type: string; coordinates: [number, number][][] };
-      properties: { fill: string };
-    }[];
-  } = { type: "FeatureCollection", features: [] };
-  mygeojson.features = test;
-  try {
-    fs.writeFileSync("./data/v2/borders.geojson", JSON.stringify(mygeojson));
-  } catch (e) {
-    console.log(e);
-  }
-}
-
-function writeGeojson() {
-  const directoryPath = "./data/v2/graphs";
+function writeGeojson(subgraphs: Graph<NodeData, LinkData>[]) {
   const pointsDot: [number, Node<NodeData>][] = [];
-  const filenames = fs.readdirSync(directoryPath);
-  filenames.forEach((file) => {
-    const filePath = path.join(directoryPath, file);
-
-    const t: Graph<NodeData, LinkData> = fromDot(
-      fs.readFileSync(filePath).toString()
-    );
-    t.forEachNode((node) => {
-      pointsDot.push([parseInt(file.slice(0, -4)), node]);
+  subgraphs.forEach((subgraph, i) => {
+    subgraph.forEachNode((node) => {
+      pointsDot.push([i, node]);
     });
   });
 
@@ -741,10 +659,11 @@ function writeGeojson() {
         bayes_rating: string;
         id: string;
         parent: number;
-        year:string
+        year: string;
       };
     }[];
   } = { type: "FeatureCollection", features: [] };
+
   for (const point of pointsDot) {
     const feature = {
       type: "Feature",
@@ -778,17 +697,8 @@ function writeGeojson() {
 
     mygeojson.features.push(feature);
   }
-  try {
-    fs.writeFileSync(
-      "./data/v2/geojson/points.geojson",
-      JSON.stringify(mygeojson)
-    );
-  } catch (e) {
-    console.log(e);
-  }
-  execSync(
-    "tippecanoe --no-tile-compression -zg --drop-densest-as-needed --extend-zooms-if-still-dropping --output-to-directory data/v2/points data/v2/geojson/points.geojson --force"
-  );
+
+  return mygeojson;
 }
 
 function groupByName(strings: Game[]): Game[][] {
@@ -825,16 +735,9 @@ function groupByName(strings: Game[]): Game[][] {
 
   return result;
 }
-function getRandomColor(excludedColors: string[]): string {
-  const colors: string[] = ["#516ebc", "#153477", "#00529c", "#37009c"].filter(
-    (x) => !excludedColors.includes(x)
-  );
-
-  return colors[Math.floor(Math.random() * colors.length)];
-}
 
 function enrichGraphs(
-  subgraphs: Graph<NodeData, LinkData>[]
+  subgraphs: Graph<NodeInputData, LinkData>[]
 ): Graph<NodeData, LinkData>[] {
   const input = fs.readFileSync("./bgg_GameItem.csv", "utf8");
 
@@ -851,14 +754,21 @@ function enrichGraphs(
       if (!row) return;
       const parsedValue = parseInt(row["num_votes"], 10);
       if (isNaN(parsedValue)) {
-        console.log("Failed to parse num_votes:", row["num_votes"]," for ID:", node.data.id.toString());
+        console.log(
+          "Failed to parse num_votes:",
+          row["num_votes"],
+          " for ID:",
+          node.data.id.toString()
+        );
       }
       sum_size = sum_size + (parsedValue || 0);
     });
     return subgraph.forEachNode((node) => {
       const row = map.get(node.data.id.toString());
       if (!row) return;
-      node.data.size = ((parseInt(row["num_votes"])|| 0) / sum_size).toString();
+      node.data.size = (
+        (parseInt(row["num_votes"]) || 0) / sum_size
+      ).toString();
       node.data.rating = row["avg_rating"];
       node.data.complexity = row["complexity"];
       node.data.min_players = row["min_players"];
@@ -880,8 +790,8 @@ function enrichGraphs(
 }
 
 function changeIdToLabel(
-  subgraphs: Graph<NodeData, LinkData>[]
-): Graph<NodeData, LinkData>[] {
+  subgraphs: Graph<NodeInputData, LinkData>[]
+): Graph<NodeInputData, LinkData>[] {
   const input = fs.readFileSync("./bgg_GameItem.csv", "utf8");
 
   const records: GameRecord[] = parse(input, {
@@ -933,14 +843,16 @@ interface GameRecord {
   category: string;
   mechanic: string;
   bayes_rating: string;
-  year:string;
+  year: string;
 }
+
 interface Game {
   Name: string;
   x: string;
   y: string;
   id: string;
 }
+
 interface NodeData {
   weight: number;
   size: string;
@@ -960,8 +872,15 @@ interface NodeData {
   id: string;
   l: string;
   label: string;
-  year:string
+  year: string;
 }
+
 interface LinkData {
   weight: number;
+}
+
+interface NodeInputData {
+  id: string;
+  l: string;
+  label: string;
 }
