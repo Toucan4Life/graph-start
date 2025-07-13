@@ -54,7 +54,7 @@ app.get("/render", (_req, res) => {
     }
   });
 
-  const graphToInclude = 8;
+  const graphToInclude = 37;
   // Exclude the clustered_graph.dot file
   const numberOfGraphs: number =
     fs.readdirSync("./graph").filter((file) => file.endsWith(".dot")).length -
@@ -76,14 +76,30 @@ app.get("/render", (_req, res) => {
   }
   const subgraphs = createSubgraphCluster(inputSubgraphs, clusterGraph);
 
-  subgraphs.forEach((subgraph, i) => {
+  const input = fs.readFileSync("./bgg_GameItem.csv", "utf8");
+  const records: GameRecord[] = parse(input, {
+    columns: true,
+    skip_empty_lines: true,
+  });
+
+  const gameDataMap = new Map(
+    records.map((record) => [record["bgg_id"], record])
+  );
+
+  const enrichedSubgraphs = enrichGraphs(subgraphs, gameDataMap);
+  enrichedSubgraphs.forEach((subgraph, i) => {
     fs.writeFileSync(join("data", "v2", "graphs", `${i}.dot`), toDot(subgraph));
   });
 
-  const arrays = computeSearchIndexes(subgraphs);
+  const arrays = computeSearchIndexes(enrichedSubgraphs);
   arrays.forEach((gamelist) => {
     fs.writeFileSync(
-      join("data", "v2", "names", gamelist[0].Name[0].toLowerCase() + ".json"),
+      join(
+        "data",
+        "v2",
+        "names",
+        gamelist[0].Name.toString()[0].toLowerCase() + ".json"
+      ),
       JSON.stringify(
         gamelist.map((element) => [
           element.Name,
@@ -95,14 +111,14 @@ app.get("/render", (_req, res) => {
     );
   });
 
-  const points = writeGeojson(subgraphs);
+  const points = writeGeojson(enrichedSubgraphs);
   fs.writeFileSync("./data/v2/geojson/points.geojson", JSON.stringify(points));
 
   execSync(
     "tippecanoe --no-tile-compression -zg --drop-densest-as-needed --extend-zooms-if-still-dropping --output-to-directory data/v2/points data/v2/geojson/points.geojson --force"
   );
 
-  const borders = writeVoronoi(subgraphs);
+  const borders = writeVoronoi(enrichedSubgraphs);
   fs.writeFileSync("./data/v2/borders.geojson", JSON.stringify(borders));
 
   res.send("Done Rendering");
@@ -111,7 +127,7 @@ app.get("/render", (_req, res) => {
 function createSubgraphCluster(
   inputSubgraphs: Graph<NodeInputData, LinkData>[],
   inputClusterGraph: Graph<NodeInputData, LinkData>
-): Graph<NodeData, LinkData>[] {
+): Graph<NodeInputData, LinkData>[] {
   const layouts = inputSubgraphs.map((graph) => calculateLayout(graph));
   const subgraphsboxs = layouts.map((layout) => {
     const GraphRect = layout.getGraphRect();
@@ -168,9 +184,7 @@ function createSubgraphCluster(
     return applyOffset(subgraph, offset, factor);
   });
 
-  subgraphs = changeIdToLabel(subgraphs);
-  const enrichedSubgraphs = enrichGraphs(subgraphs);
-  return enrichedSubgraphs;
+  return subgraphs;
 }
 
 function applyOffset(
@@ -189,10 +203,59 @@ function applyOffset(
   return graph;
 }
 
+function createKNNGraph(
+  graphori: Graph<NodeInputData, LinkData>
+): Graph<NodeInputData, LinkData> {
+  // Create a copy of the graph to avoid modifying the original
+  const graph = createGraph();
+  graphori.forEachNode((node) => {
+    graph.addNode(node.id, node.data);
+  });
+  graphori.forEachLink((link) => {
+    graph.addLink(link.fromId, link.toId, link.data);
+  });
+
+  const bestLinks: Link<LinkData>[] = [];
+  const uniqueLinks = new Map();
+
+  graph.forEachNode((node) => {
+    const nodeLinks = node.links;
+    if (nodeLinks != null) {
+      nodeLinks.sort((a, b) => b.data.weight - a.data.weight);
+
+      // Take top 2 links
+      if (nodeLinks.length > 0) bestLinks.push(nodeLinks[0]);
+      if (nodeLinks.length > 1) bestLinks.push(nodeLinks[1]);
+      if (nodeLinks.length > 2) bestLinks.push(nodeLinks[2]);
+    }
+  });
+
+  // Remove duplicates (bidirectional links)
+  bestLinks.forEach((link) => {
+    const key = `${link.fromId}-${link.toId}`;
+    const reverseKey = `${link.toId}-${link.fromId}`;
+    if (!uniqueLinks.has(key) && !uniqueLinks.has(reverseKey)) {
+      uniqueLinks.set(key, link);
+    }
+  });
+
+  // Clear graph and add only unique best links
+  graph.clear();
+  graphori.forEachNode((node) => {
+    graph.addNode(node.id, node.data);
+  });
+  uniqueLinks.forEach((link) => {
+    graph.addLink(link.fromId, link.toId, link.data);
+  });
+
+  return graph;
+}
+
 function calculateClusteredLayout(
   inputClusterGraph: Graph<NodeInputData, LinkData>,
   nodeRadius: number[]
 ): { x: number; y: number }[] {
+  inputClusterGraph = createKNNGraph(inputClusterGraph);
   const layout = calculateLayout(inputClusterGraph);
   // Create D3 nodes with radius information
   const nodes: Node<{ id: string }>[] = [];
@@ -230,10 +293,16 @@ function calculateLayout(
 ): Layout<Graph<NodeInputData, LinkData>> {
   const layout = createLayout(graph, {
     timeStep: 1,
-    springLength: 10,
-    springCoefficient: 0.8,
-    gravity: -12,
-    dragCoefficient: 0.9,
+    springLength: 55,
+    springCoefficient: 0.08,
+    gravity: -10,
+    dragCoefficient: 0.09,
+  });
+
+  graph.forEachLink((link) => {
+    const spring = layout.getSpring(link.fromId, link.toId);
+    if (!spring) return;
+    spring.coefficient = link.data.weight;
   });
 
   for (let i = 0; i < 10000 && !layout.step(); i++) {
@@ -288,9 +357,9 @@ function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
     polygon: d.Delaunay.Polygon;
     neighbor: number[];
   }[] = [];
-  
+
   subgraphs.forEach((subgraph, index) => {
-    subgraph.forEachNode(node => {
+    subgraph.forEachNode((node) => {
       const [x, y] = node.data.l.split(",").map(Number);
       nodes.push({
         x,
@@ -304,9 +373,9 @@ function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
   });
 
   // Create Voronoi diagram
-  const points: [number, number][] = nodes.map(n => [n.x, n.y]);
+  const points: [number, number][] = nodes.map((n) => [n.x, n.y]);
   const voronoi = d.Delaunay.from(points).voronoi([-90, -45, 90, 45]);
-  
+
   // Add polygon and neighbor data
   nodes.forEach((node, i) => {
     node.polygon = voronoi.cellPolygon(i);
@@ -314,25 +383,33 @@ function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
   });
 
   // Group nodes by subgraph
-  const nodesBySubgraph = nodes.reduce((acc, node) => {
-    if (!acc[node.subgraph]) acc[node.subgraph] = [];
-    acc[node.subgraph].push(node);
-    return acc;
-  }, {} as { [key: number]: typeof nodes });
+  const nodesBySubgraph = nodes.reduce(
+    (acc, node) => {
+      if (!acc[node.subgraph]) acc[node.subgraph] = [];
+      acc[node.subgraph].push(node);
+      return acc;
+    },
+    {} as { [key: number]: typeof nodes }
+  );
 
   // Create union polygons for each subgraph
-  const unionPolygons = Object.values(nodesBySubgraph).map(nodesArray => {
-    const polygons = nodesArray.map(node => 
-      turf.polygon([node.polygon.map(point => [point[0], point[1]])])
+  const unionPolygons = Object.values(nodesBySubgraph).map((nodesArray) => {
+    const polygons = nodesArray.map((node) =>
+      turf.polygon([node.polygon.map((point) => [point[0], point[1]])])
     );
-    return turf.union(turf.featureCollection(polygons)) as Feature<Polygon, GeoJsonProperties>;
+    return turf.union(turf.featureCollection(polygons)) as Feature<
+      Polygon,
+      GeoJsonProperties
+    >;
   });
 
   // Find intersecting polygons for coloring
   const intersections = unionPolygons.map((polygon, i) =>
     unionPolygons
       .map((_, j) => j)
-      .filter(j => j !== i && turf.booleanIntersects(polygon, unionPolygons[j]))
+      .filter(
+        (j) => j !== i && turf.booleanIntersects(polygon, unionPolygons[j])
+      )
   );
 
   // Apply 4-coloring algorithm
@@ -340,7 +417,7 @@ function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
   const colorPalette = ["#516ebc", "#153477", "#00529c", "#37009c"];
 
   // Create colored features
-  const features = unionPolygons.map((polygon, i) => 
+  const features = unionPolygons.map((polygon, i) =>
     createGeoFeature(
       polygon?.geometry.coordinates[0] as [number, number][],
       colorPalette[coloring[i] % colorPalette.length],
@@ -374,11 +451,11 @@ function createGeoFeature(
 
 function writeGeojson(subgraphs: Graph<NodeData, LinkData>[]) {
   const features: GeoJSON.Feature[] = [];
-  
+
   subgraphs.forEach((subgraph, subgraphIndex) => {
-    subgraph.forEachNode(node => {
+    subgraph.forEachNode((node) => {
       const coordinates = node.data.l.split(",").map(Number);
-      
+
       features.push({
         type: "Feature",
         geometry: {
@@ -414,19 +491,13 @@ function writeGeojson(subgraphs: Graph<NodeData, LinkData>[]) {
 }
 
 function enrichGraphs(
-  subgraphs: Graph<NodeInputData, LinkData>[]
+  subgraphs: Graph<NodeInputData, LinkData>[],
+  gameDataMap: Map<string, GameRecord>
 ): Graph<NodeData, LinkData>[] {
-  const input = fs.readFileSync("./bgg_GameItem.csv", "utf8");
-  const records: GameRecord[] = parse(input, {
-    columns: true,
-    skip_empty_lines: true,
-  });
-  const gameDataMap = new Map(records.map(record => [record["bgg_id"], record]));
-
-  return subgraphs.map(subgraph => {
+  return subgraphs.map((subgraph) => {
     // Calculate total votes for size normalization
     let totalVotes = 0;
-    subgraph.forEachNode(node => {
+    subgraph.forEachNode((node) => {
       const gameData = gameDataMap.get(node.data.id.toString());
       const votes = parseInt(gameData?.["num_votes"] || "0", 10);
       totalVotes += isNaN(votes) ? 0 : votes;
@@ -434,17 +505,19 @@ function enrichGraphs(
 
     // Create enriched graph
     const enrichedGraph = createGraph<NodeData, LinkData>();
-    
-    subgraph.forEachNode(node => {
+
+    subgraph.forEachNode((node) => {
       const gameData = gameDataMap.get(node.data.id.toString());
       if (!gameData) return;
 
       const votes = parseInt(gameData["num_votes"] || "0", 10);
       if (isNaN(votes)) {
-        console.log(`Failed to parse num_votes: ${gameData["num_votes"]} for ID: ${node.data.id}`);
+        console.log(
+          `Failed to parse num_votes: ${gameData["num_votes"]} for ID: ${node.data.id}`
+        );
       }
 
-      enrichedGraph.addNode(node.id, {
+      enrichedGraph.addNode(gameData["name"], {
         id: node.data.id,
         l: node.data.l,
         label: node.data.label,
@@ -464,51 +537,23 @@ function enrichGraphs(
       });
     });
 
-    subgraph.forEachLink(link => {
-      enrichedGraph.addLink(link.fromId, link.toId, link.data);
-    });
-
-    return enrichedGraph;
-  });
-}
-
-function changeIdToLabel(
-  subgraphs: Graph<NodeInputData, LinkData>[]
-): Graph<NodeInputData, LinkData>[] {
-  const input = fs.readFileSync("./bgg_GameItem.csv", "utf8");
-  const records: GameRecord[] = parse(input, {
-    columns: true,
-    skip_empty_lines: true,
-  });
-  const gameDataMap = new Map(records.map(record => [record["bgg_id"], record]));
-
-  return subgraphs.map(subgraph => {
-    const newGraph = createGraph();
-    
-    // Add nodes with names as IDs
-    subgraph.forEachNode(node => {
-      const gameData = gameDataMap.get(node.data.id.toString());
-      if (gameData) {
-        newGraph.addNode(gameData["name"], node.data);
-      }
-    });
-    
-    // Add links using names as IDs
-    subgraph.forEachLink(link => {
+    subgraph.forEachLink((link) => {
       const fromNode = subgraph.getNode(link.fromId);
       const toNode = subgraph.getNode(link.toId);
-      
       if (fromNode && toNode) {
         const fromGameData = gameDataMap.get(fromNode.data.id.toString());
         const toGameData = gameDataMap.get(toNode.data.id.toString());
-        
         if (fromGameData && toGameData) {
-          newGraph.addLink(fromGameData["name"], toGameData["name"], link.data);
+          enrichedGraph.addLink(
+            fromGameData["name"],
+            toGameData["name"],
+            link.data
+          );
         }
       }
     });
-    
-    return newGraph;
+
+    return enrichedGraph;
   });
 }
 
