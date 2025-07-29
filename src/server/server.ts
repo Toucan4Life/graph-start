@@ -54,7 +54,7 @@ app.get("/render", (_req, res) => {
     }
   });
 
-  const graphToInclude = 37;
+  const graphToInclude = 27;
   // Exclude the clustered_graph.dot file
   const numberOfGraphs: number =
     fs.readdirSync("./graph").filter((file) => file.endsWith(".dot")).length -
@@ -348,62 +348,63 @@ function computeSearchIndexes(subgraphs: Graph<NodeData, LinkData>[]) {
 }
 
 function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
-  // Extract nodes with coordinates
-  const nodes: {
-    x: number;
-    y: number;
-    subgraph: number;
-    id: string;
-    polygon: d.Delaunay.Polygon;
-    neighbor: number[];
-  }[] = [];
-
+  const nodes: { x: number; y: number; subgraph: number; id: string }[] = [];
   subgraphs.forEach((subgraph, index) => {
     subgraph.forEachNode((node) => {
       const [x, y] = node.data.l.split(",").map(Number);
-      nodes.push({
-        x,
-        y,
-        subgraph: index,
-        id: node.data.id,
-        polygon: [],
-        neighbor: [],
-      });
+      nodes.push({ x, y, subgraph: index, id: node.data.id });
     });
   });
 
-  // Create Voronoi diagram
   const points: [number, number][] = nodes.map((n) => [n.x, n.y]);
-  const voronoi = d.Delaunay.from(points).voronoi([-90, -45, 90, 45]);
 
-  // Add polygon and neighbor data
-  nodes.forEach((node, i) => {
-    node.polygon = voronoi.cellPolygon(i);
-    node.neighbor = [...voronoi.neighbors(i)];
-  });
+  // 🧠 Compute the convex hull
+  const turfPoints = turf.featureCollection(
+    points.map(([x, y]) => turf.point([x, y]))
+  );
+  const concave = turf.concave(turfPoints);
 
-  // Group nodes by subgraph
+  if (!concave || concave.geometry.type !== "Polygon") {
+    throw new Error("Concave hull could not be computed.");
+  }
+
+  // ✅ Add padding (e.g., 1 unit = ~1 km for Geo coordinates)
+  const hull = turf.buffer(concave, 500, { units: "kilometers" });
+
+  if(!hull || hull.geometry.type !== "Polygon") return
+
+  const bbox = turf.bbox(hull);
+  const voronoi = d.Delaunay.from(points).voronoi(bbox);
+
+  // 🧩 Clip Voronoi cells with convex hull
   const nodesBySubgraph = nodes.reduce(
-    (acc, node) => {
-      if (!acc[node.subgraph]) acc[node.subgraph] = [];
-      acc[node.subgraph].push(node);
+    (acc, node, i) => {
+      const polygon = voronoi.cellPolygon(i);
+      const voronoiPolygon = turf.polygon([polygon.map(([x, y]) => [x, y])]);
+
+      // 💥 Intersect with convex hull to clip
+      const clipped = turf.intersect(
+        turf.featureCollection([voronoiPolygon, hull])
+      );
+      if (!clipped || clipped.geometry.type !== "Polygon") return acc;
+
+      (acc[node.subgraph] ||= []).push({
+        ...node,
+        polygon: clipped.geometry.coordinates[0] as [number, number][],
+      });
       return acc;
     },
-    {} as { [key: number]: typeof nodes }
+    {} as { [key: number]: ((typeof nodes)[0] & { polygon: number[][] })[] }
   );
-
-  // Create union polygons for each subgraph
+  // 🔄 Create union polygons for each subgraph
   const unionPolygons = Object.values(nodesBySubgraph).map((nodesArray) => {
-    const polygons = nodesArray.map((node) =>
-      turf.polygon([node.polygon.map((point) => [point[0], point[1]])])
-    );
+    const polygons = nodesArray.map((node) => turf.polygon([node.polygon]));
     return turf.union(turf.featureCollection(polygons)) as Feature<
       Polygon,
       GeoJsonProperties
     >;
   });
 
-  // Find intersecting polygons for coloring
   const intersections = unionPolygons.map((polygon, i) =>
     unionPolygons
       .map((_, j) => j)
@@ -412,11 +413,9 @@ function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
       )
   );
 
-  // Apply 4-coloring algorithm
   const coloring = gen4col(intersections, true) as number[];
   const colorPalette = ["#516ebc", "#153477", "#00529c", "#37009c"];
 
-  // Create colored features
   const features = unionPolygons.map((polygon, i) =>
     createGeoFeature(
       polygon?.geometry.coordinates[0] as [number, number][],

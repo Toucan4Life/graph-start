@@ -28,3 +28,5 @@ built
 src/server/graph/
 src/server/graph_layout/
 src/server/bgg_GameItem_old.csv
+src/server/bgg_GameItem_old_old.csv
+package-lock.json

@@ -7,7 +7,7 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"Vue.volar"
+				"esbenp.prettier-vscode"
 			]
 		}
 	},
