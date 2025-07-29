@@ -15,6 +15,7 @@
     "d3": "^7.9.0",
     "d3-geo-voronoi": "^2.1.0",
     "miserables": "^2.0.0",
+    "ml-pca": "^4.1.1",
     "ngraph.coarsen": "^1.5.0",
     "ngraph.events": "^1.0.0",
     "ngraph.forcelayout": "^3.3.1",

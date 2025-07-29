@@ -6,15 +6,15 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          80.093,
-          8.22
+          -49.806,
+          10.341
         ]
       },
       "properties": {
-        "symbolzoom": 3,
-        "name": "Solo Wargame",
-        "labelId": "hrv",
-        "ownerId": 35
+        "symbolzoom": 7,
+        "name": "Rory's Story",
+        "labelId": "fpu",
+        "ownerId": 26
       }
     },
     {
@@ -22,15 +22,15 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -49.626,
-          20.27
+          -46.932,
+          -6.533
         ]
       },
       "properties": {
-        "symbolzoom": 3,
-        "name": "Deduction",
-        "labelId": "dcz",
-        "ownerId": 25
+        "symbolzoom": 4,
+        "name": "Sports",
+        "labelId": "ltu",
+        "ownerId": 20
       }
     },
     {
@@ -38,15 +38,15 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          34.647,
-          5.552
+          -82.722,
+          -8.744
         ]
       },
       "properties": {
-        "symbolzoom": 3,
-        "name": "CCG & Miniatures",
-        "labelId": "29i",
-        "ownerId": 23
+        "symbolzoom": 4,
+        "name": "Collectible & Miniatures",
+        "labelId": "og9",
+        "ownerId": 10
       }
     },
     {
@@ -54,15 +54,15 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -12.2,
-          27.172
+          -52.291,
+          -33.646
         ]
       },
       "properties": {
-        "symbolzoom": 3,
-        "name": "Economic",
-        "labelId": "kj4",
-        "ownerId": 34
+        "symbolzoom": 4,
+        "name": "Economic ",
+        "labelId": "gkz",
+        "ownerId": 16
       }
     },
     {
@@ -70,14 +70,110 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -47.979,
-          -42.097
+          -64.403,
+          -18.98
+        ]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Old school wargames",
+        "labelId": "u8p",
+        "ownerId": 7
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -66.413,
+          -11.277
+        ]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "Wargames",
+        "labelId": "rrx",
+        "ownerId": 6
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -29.4,
+          -0.998
+        ]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Classic",
+        "labelId": "e4q",
+        "ownerId": 4
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -3.108,
+          -31.005
         ]
       },
       "properties": {
         "symbolzoom": 3,
-        "name": "Solo",
-        "labelId": "t7o",
+        "name": "Manga",
+        "labelId": "cp1",
+        "ownerId": 18
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.598,
+          -20.32
+        ]
+      },
+      "properties": {
+        "symbolzoom": 3,
+        "name": "Lego",
+        "labelId": "v5f",
+        "ownerId": 21
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.94,
+          -6.472
+        ]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Funkoverse",
+        "labelId": "3kt",
+        "ownerId": 24
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -4.903,
+          4.673
+        ]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "Unmatched",
+        "labelId": "ah3",
         "ownerId": 19
       }
     },
@@ -86,15 +182,15 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -21.597,
-          17.806
+          19.838,
+          -17.163
         ]
       },
       "properties": {
-        "symbolzoom": 3,
-        "name": "East Asia",
-        "labelId": "aid",
-        "ownerId": 31
+        "symbolzoom": 7,
+        "name": "Chris Handy",
+        "labelId": "0iy",
+        "ownerId": 25
       }
     },
     {
@@ -102,15 +198,79 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -13.534,
-          -41.652
+          25.43,
+          -11.044
         ]
       },
       "properties": {
-        "symbolzoom": 4,
-        "name": "For Kids",
-        "labelId": "95r",
-        "ownerId": 3
+        "symbolzoom": 5,
+        "name": "Deduction",
+        "labelId": "m1h",
+        "ownerId": 15
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.496,
+          -14.304
+        ]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Ascension",
+        "labelId": "2nd",
+        "ownerId": 22
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.594,
+          -6.076
+        ]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Solo games",
+        "labelId": "evm",
+        "ownerId": 12
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          31.585,
+          27.027
+        ]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Spanish",
+        "labelId": "811",
+        "ownerId": 11
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          64.349,
+          34.569
+        ]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Modern boardgames",
+        "labelId": "kdo",
+        "ownerId": 0
       }
     }
   ]
