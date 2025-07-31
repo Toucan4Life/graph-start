@@ -6,12 +6,12 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -49.806,
-          10.341
+          -49.24,
+          6.984
         ]
       },
       "properties": {
-        "symbolzoom": 7,
+        "symbolzoom": 4,
         "name": "Rory's Story",
         "labelId": "fpu",
         "ownerId": 26
@@ -166,13 +166,13 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -4.903,
-          4.673
+          -4.905,
+          4.675
         ]
       },
       "properties": {
         "symbolzoom": 4,
-        "name": "Unmatched",
+        "name": "Unmatched & Dice Throne",
         "labelId": "ah3",
         "ownerId": 19
       }
