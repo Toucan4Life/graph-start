@@ -90,8 +90,8 @@ app.get("/render", (_req, res) => {
   enrichedSubgraphs.forEach((subgraph, i) => {
     fs.writeFileSync(join("data", "v2", "graphs", `${i}.dot`), toDot(subgraph));
   });
-
-  const arrays = computeSearchIndexes(enrichedSubgraphs);
+ 
+  const arrays = computeSearchIndexes(enrichedSubgraphs,gameDataMap);
   arrays.forEach((gamelist) => {
     fs.writeFileSync(
       join(
@@ -106,6 +106,7 @@ app.get("/render", (_req, res) => {
           parseFloat(element.x),
           parseFloat(element.y),
           element.id,
+          element.year
         ])
       )
     );
@@ -314,7 +315,7 @@ function calculateLayout(
   return layout;
 }
 
-function computeSearchIndexes(subgraphs: Graph<NodeData, LinkData>[]) {
+function computeSearchIndexes(subgraphs: Graph<NodeData, LinkData>[], gameDataMap: Map<string, GameRecord>) {
   const games: Game[] = [];
 
   // Extract games from all subgraphs
@@ -330,6 +331,7 @@ function computeSearchIndexes(subgraphs: Graph<NodeData, LinkData>[]) {
         x,
         y,
         id: node.data.id,
+        year: gameDataMap.get(node.data.id.toString())?.year || "Unknown",
       });
     });
   });
@@ -581,6 +583,7 @@ interface Game {
   x: string;
   y: string;
   id: string;
+  year: string;
 }
 
 interface NodeData extends NodeInputData {
