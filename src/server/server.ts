@@ -16,7 +16,8 @@ import { fileURLToPath } from "url";
 import { join } from "path";
 import { execSync } from "child_process";
 import type { Feature, Polygon, GeoJsonProperties } from "geojson";
-
+import lz4 from "lz4js";
+import pako from "pako"
 const app = express();
 const port = 3010;
 app.use(cors());
@@ -33,6 +34,75 @@ app.listen(port, () => {
 
 app.get("/", (_req, res) => {
   res.send("Hello World!");
+});
+
+app.get("/compress", (_req, res) => {
+  fs.readdirSync("./data/v2/compressedGraphs").forEach((file) => {
+    fs.unlinkSync(path.join("./data/v2/compressedGraphs", file));
+  });
+
+  for (let i = 0; i <= 27 - 1; i++) {
+    console.log(`Loading extended subgraph ${i}`);
+    const data = fs.readFileSync("./data/v2/extendedGraphs/" + i + ".dot");
+    const compressed = Buffer.from(pako.deflate(data));
+    fs.writeFileSync("./data/v2/compressedGraphs/" + i + ".gzip", compressed);
+  }
+
+  res.send("Done Compressing");
+});
+
+app.get("/egraph", (_req, res) => {
+  fs.readdirSync("./data/v2/extendedGraphs").forEach((file) => {
+    fs.unlinkSync(path.join("./data/v2/extendedGraphs", file));
+  });
+  const input = fs.readFileSync("./bgg_GameItem.csv", "utf8");
+  const records: GameRecord[] = parse(input, {
+    columns: true,
+    skip_empty_lines: true,
+  });
+
+  const gameDataMap = new Map(
+    records.map((record) => [record["bgg_id"], record])
+  );
+  const inputSubgraphs = [];
+  for (let i = 0; i <= 27 - 1; i++) {
+    console.log(`Loading extended subgraph ${i}`);
+    const graph: Graph<NodeInputData, LinkData> = fromDot(
+      fs.readFileSync("./extendedGraph/subgraph_" + i + ".dot").toString()
+    );
+    inputSubgraphs.push(graph);
+  }
+  const enrichedSubgraphs = enrichGraphs(inputSubgraphs, gameDataMap);
+
+  const layoutsubgraphs = [];
+  for (let i = 0; i <= 27 - 1; i++) {
+    console.log(`Loading subgraph ${i}`);
+    const graph: Graph<NodeInputData, LinkData> = fromDot(
+      fs.readFileSync(join("data", "v2", "graphs", `${i}.dot`)).toString()
+    );
+    layoutsubgraphs.push(graph);
+  }
+  const nodeLayoutDict: { [id: string]: string } = {};
+
+  layoutsubgraphs.forEach((graph) => {
+    graph.forEachNode((node) => {
+      nodeLayoutDict[node.data.id] = node.data.l;
+    });
+  });
+
+  for (let i = 0; i <= 27 - 1; i++) {
+    enrichedSubgraphs[i].forEachNode((node) => {
+      node.data.l = nodeLayoutDict[node.data.id];
+    });
+  }
+
+  enrichedSubgraphs.forEach((subgraph, i) => {
+    fs.writeFileSync(
+      join("data", "v2", "extendedGraphs", `${i}.dot`),
+      toDot(subgraph)
+    );
+  });
+  res.send("Done Rendering");
 });
 
 app.get("/render", (_req, res) => {
@@ -90,8 +160,8 @@ app.get("/render", (_req, res) => {
   enrichedSubgraphs.forEach((subgraph, i) => {
     fs.writeFileSync(join("data", "v2", "graphs", `${i}.dot`), toDot(subgraph));
   });
- 
-  const arrays = computeSearchIndexes(enrichedSubgraphs,gameDataMap);
+
+  const arrays = computeSearchIndexes(enrichedSubgraphs, gameDataMap);
   arrays.forEach((gamelist) => {
     fs.writeFileSync(
       join(
@@ -106,7 +176,7 @@ app.get("/render", (_req, res) => {
           parseFloat(element.x),
           parseFloat(element.y),
           element.id,
-          element.year
+          element.year,
         ])
       )
     );
@@ -315,7 +385,10 @@ function calculateLayout(
   return layout;
 }
 
-function computeSearchIndexes(subgraphs: Graph<NodeData, LinkData>[], gameDataMap: Map<string, GameRecord>) {
+function computeSearchIndexes(
+  subgraphs: Graph<NodeData, LinkData>[],
+  gameDataMap: Map<string, GameRecord>
+) {
   const games: Game[] = [];
 
   // Extract games from all subgraphs
@@ -373,7 +446,7 @@ function writeVoronoi(subgraphs: Graph<NodeData, LinkData>[]) {
   // ✅ Add padding (e.g., 1 unit = ~1 km for Geo coordinates)
   const hull = turf.buffer(concave, 500, { units: "kilometers" });
 
-  if(!hull || hull.geometry.type !== "Polygon") return
+  if (!hull || hull.geometry.type !== "Polygon") return;
 
   const bbox = turf.bbox(hull);
   const voronoi = d.Delaunay.from(points).voronoi(bbox);
@@ -518,10 +591,10 @@ function enrichGraphs(
         );
       }
 
-      enrichedGraph.addNode(gameData["name"], {
+      enrichedGraph.addNode(node.data.id, {
         id: node.data.id,
         l: node.data.l,
-        label: node.data.label,
+        label: gameData["name"],
         rating: gameData["avg_rating"],
         complexity: gameData["complexity"],
         min_players: gameData["min_players"],
@@ -535,6 +608,7 @@ function enrichGraphs(
         bayes_rating: gameData["bayes_rating"],
         year: gameData["year"],
         size: ((votes || 0) / totalVotes).toString(),
+        c: node.data.c == undefined ? undefined : node.data.c,
       });
     });
 
@@ -545,11 +619,7 @@ function enrichGraphs(
         const fromGameData = gameDataMap.get(fromNode.data.id.toString());
         const toGameData = gameDataMap.get(toNode.data.id.toString());
         if (fromGameData && toGameData) {
-          enrichedGraph.addLink(
-            fromGameData["name"],
-            toGameData["name"],
-            link.data
-          );
+          enrichedGraph.addLink(fromNode.data.id, toNode.data.id, link.data);
         }
       }
     });
@@ -576,6 +646,7 @@ interface GameRecord {
   mechanic: string;
   bayes_rating: string;
   year: string;
+  label: string;
 }
 
 interface Game {
@@ -600,6 +671,7 @@ interface NodeData extends NodeInputData {
   max_time: string;
   bayes_rating: string;
   year: string;
+  c: string;
 }
 
 interface LinkData {

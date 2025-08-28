@@ -26,12 +26,15 @@
     "ngraph.hde": "^1.0.1",
     "ngraph.louvain": "^2.0.0",
     "ngraph.todot": "^3.0.2",
+    "pako": "^2.1.0",
     "vue": "^3.2.33",
     "w-gl": "^0.20.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",
     "@types/d3": "^7.4.3",
+    "@types/lz4js": "^0.2.1",
+    "@types/pako": "^2.0.4",
     "@vitejs/plugin-vue": "^2.3.1",
     "eslint": "^8.57.1",
     "eslint-plugin-vue": "^8.7.1",
