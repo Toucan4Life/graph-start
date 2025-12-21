@@ -1,0 +1,20 @@
+graph G {
+0 [id=315975.0, label="Dungeon Fighter in the Labyrinth of Sinister Storms"];
+1 [id=315976.0, label="Dungeon Fighter in the Chambers of Malevolent Magma"];
+2 [id=321044.0, label="Dungeon Fighter in the Catacombs of Gloomy Ghosts"];
+3 [id=321047.0, label="Dungeon Fighter in the Castle of Frightening Frosts"];
+4 [id=334349.0, label="Dungeon Fighter: Collector's Edition"];
+0 -- 1 [weight=0.27615062761506276];
+0 -- 2 [weight=0.30327868852459017];
+0 -- 3 [weight=0.2653061224489796];
+0 -- 4 [weight=0.05647840531561462];
+1 -- 2 [weight=0.328125];
+1 -- 3 [weight=0.3954802259887006];
+1 -- 4 [weight=0.0625];
+2 -- 3 [weight=0.3333333333333333];
+3 -- 4 [weight=0.061224489795918366];
+0 -- 1357028.0 [weight=0.07828947368421052];
+1357028.0 [id=357028.0, c=1];
+1 -- 1357028.0 [weight=0.052772211088844355];
+2 -- 1357028.0 [weight=0.059333333333333335];
+}

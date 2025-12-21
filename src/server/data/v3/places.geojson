@@ -1,0 +1,677 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [0.958, 27.552]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "Dungeon Fighter",
+        "labelId": "lk1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [45.065, -5.333]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Black Stories",
+        "labelId": "nt1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-13.358, 12.651]
+      },
+      "properties": {
+        "symbolzoom": 8,
+        "name": "Portugal",
+        "labelId": "mw3"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [35.06, 12.741]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Chris Handy",
+        "labelId": "2y6"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [13.9, -11.692]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Lego",
+        "labelId": "3ty"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-24.713, -31.336]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Avalanche Wargame",
+        "labelId": "6yw"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [49.089, -3.164]
+      },
+      "properties": {
+        "symbolzoom": 7,
+        "name": "Timeline & Rory",
+        "labelId": "f0i"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [8.84, -16.823]
+      },
+      "properties": {
+        "symbolzoom": 7,
+        "name": "Sports",
+        "labelId": "6k0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-17.277, 15.523]
+      },
+      "properties": {
+        "symbolzoom": 7,
+        "name": "Dice Throne & Unmatched",
+        "labelId": "7ta"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-38.743, -44.819]
+      },
+      "properties": {
+        "symbolzoom": 7,
+        "name": "Dean Essig Wargame",
+        "labelId": "y3c"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-14.75, 4.564]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "18xx & Stock Holding",
+        "labelId": "0gg"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [41.736, 0.189]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Movie / TV & Take That",
+        "labelId": "g3g"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-17.928, 38.489]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Escape Games",
+        "labelId": "omd"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [34.665, -16.892]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Munchkin & Friends",
+        "labelId": "9dn"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [30.49, 4.88]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Solo Game",
+        "labelId": "1gc"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [44.944, -14.549]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Children's Game",
+        "labelId": "txy"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [6.761, -28.146]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "CCG & Miniatures",
+        "labelId": "kfb"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-39.091, 26.811]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Available on BGA",
+        "labelId": "2k7"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-6.101, -13.732]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "2 Players Wargames",
+        "labelId": "67t"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-51.911, -35.334]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Wargames",
+        "labelId": "2rr"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [74.405, 2.531]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "1996 - 2004",
+        "labelId": "eqv"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [56.013, -3.903]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "2004 - 2012",
+        "labelId": "g1h"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-19.298, 21.098]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "2020 - Now",
+        "labelId": "2tn"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-41.928, 38.515]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Reiner Knizia & Japanese Game",
+        "labelId": "cks"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-67.758, 31.469]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "French & Polish Designer",
+        "labelId": "k0n"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [21.979, -22.203]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Pre 2000 Boardgame",
+        "labelId": "93u"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [3.547, -6.505]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Popular on BoardGameGeek",
+        "labelId": "mdd"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [0.958, 27.552]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "Dungeon Fighter",
+        "labelId": "lk1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [45.065, -5.333]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Black Stories",
+        "labelId": "nt1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-13.358, 12.651]
+      },
+      "properties": {
+        "symbolzoom": 8,
+        "name": "Portugal",
+        "labelId": "mw3"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [35.06, 12.741]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Chris Handy",
+        "labelId": "2y6"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [13.9, -11.692]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Lego",
+        "labelId": "3ty"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-24.713, -31.336]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Avalanche Wargame",
+        "labelId": "6yw"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [49.089, -3.164]
+      },
+      "properties": {
+        "symbolzoom": 7,
+        "name": "Timeline & Rory",
+        "labelId": "f0i"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [8.84, -16.823]
+      },
+      "properties": {
+        "symbolzoom": 7,
+        "name": "Sports",
+        "labelId": "6k0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-17.277, 15.523]
+      },
+      "properties": {
+        "symbolzoom": 7,
+        "name": "Dice Throne & Unmatched",
+        "labelId": "7ta"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-38.743, -44.819]
+      },
+      "properties": {
+        "symbolzoom": 7,
+        "name": "Dean Essig Wargame",
+        "labelId": "y3c"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-14.75, 4.564]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "18xx & Stock Holding",
+        "labelId": "0gg"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [41.736, 0.189]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Movie / TV & Take That",
+        "labelId": "g3g"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-17.928, 38.489]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Escape Games",
+        "labelId": "omd"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [34.665, -16.892]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Munchkin & Friends",
+        "labelId": "9dn"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [30.49, 4.88]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Solo Game",
+        "labelId": "1gc"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [44.944, -14.549]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Children's Game",
+        "labelId": "txy"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [6.761, -28.146]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "CCG & Miniatures",
+        "labelId": "kfb"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-39.091, 26.811]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Available on BGA",
+        "labelId": "2k7"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-6.101, -13.732]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "2 Players Wargames",
+        "labelId": "67t"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-51.911, -35.334]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Wargames",
+        "labelId": "2rr"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [74.405, 2.531]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "1996 - 2004",
+        "labelId": "eqv"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [56.013, -3.903]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "2004 - 2012",
+        "labelId": "g1h"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-19.059, 21.187]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Modern Boardgame",
+        "labelId": "2tn"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-41.928, 38.515]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Reiner Knizia & Japanese Game",
+        "labelId": "cks"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-67.758, 31.469]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "French & Polish Designer",
+        "labelId": "k0n"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [21.979, -22.203]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "Pre 2000 Boardgame",
+        "labelId": "93u"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [3.547, -6.505]
+      },
+      "properties": {
+        "symbolzoom": 5,
+        "name": "Popular on BoardGameGeek",
+        "labelId": "mdd"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [13.074, 16.526]
+      },
+      "properties": {
+        "symbolzoom": 6,
+        "name": "2012 - 2020 #1",
+        "labelId": "nf0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [7.743, 34.907]
+      },
+      "properties": {
+        "symbolzoom": 4,
+        "name": "2012 - 2020 #2",
+        "labelId": "5te"
+      }
+    }
+  ]
+}
