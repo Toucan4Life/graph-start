@@ -80,14 +80,17 @@ app.get("/egraph", (_req, res) => {
     fs.readFileSync(join("data", "v3", "graphs", `graph.dot`)).toString(),
   );
   const nodeLayoutDict: { [id: string]: string } = {};
+  const nodeCommunityDict: { [id: string]: string } = {};
 
   layoutsubgraphs.forEachNode((node) => {
     nodeLayoutDict[node.data.id] = node.data.pos;
+    nodeCommunityDict[node.data.id] = node.data.c;
   });
 
   for (let i = 0; i <= 31 - 1; i++) {
     enrichedSubgraphs[i].forEachNode((node) => {
       node.data.pos = nodeLayoutDict[node.data.id];
+      node.data.c = nodeCommunityDict[node.data.id];
     });
   }
 
