@@ -653,11 +653,11 @@
       "type": "Feature",
       "geometry": {
         "type": "Point",
-        "coordinates": [13.074, 16.526]
+        "coordinates": [14.153, 16.737]
       },
       "properties": {
-        "symbolzoom": 6,
-        "name": "2012 - 2020 #1",
+        "symbolzoom": 4,
+        "name": "2012 - 2020",
         "labelId": "nf0"
       }
     },
@@ -665,11 +665,11 @@
       "type": "Feature",
       "geometry": {
         "type": "Point",
-        "coordinates": [7.743, 34.907]
+        "coordinates": [7.535, 35.262]
       },
       "properties": {
         "symbolzoom": 4,
-        "name": "2012 - 2020 #2",
+        "name": "German Designer",
         "labelId": "5te"
       }
     }
