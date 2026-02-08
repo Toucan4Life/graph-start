@@ -1,0 +1,29 @@
+graph G {
+0 [id=253948, label=Jaliz];
+1 [id=253949, label=Peyshoom];
+2 [id=256526, label=Zaar];
+3 [id=261168, label="Wannabe Football"];
+4 [id=262814, label=Stogite];
+5 [id=273085, label="شب مافیا (Mafia's Night)"];
+6 [id=284617, label="King Thief Minister"];
+7 [id=286891, label="The Last Station"];
+8 [id=286892, label="Two Khans"];
+9 [id=310603, label="ژاندارمری (Gendarmery)"];
+0 -- 1 [weight=0.2448979592];
+0 -- 2 [weight=0.1290322581];
+0 -- 4 [weight=0.2133333333];
+1 -- 2 [weight=0.1250000000];
+1 -- 4 [weight=0.1515151515];
+1 -- 6 [weight=0.1315789474];
+2 -- 3 [weight=0.0819672131];
+2 -- 4 [weight=0.1428571429];
+2 -- 5 [weight=0.1123595506];
+2 -- 6 [weight=0.2264150943];
+2 -- 9 [weight=0.1621621622];
+3 -- 6 [weight=0.0940170940];
+5 -- 7 [weight=0.2333333333];
+6 -- 9 [weight=0.1388888889];
+7 -- 8 [weight=0.3461538462];
+6 -- 1256620 [weight=0.0780141844];
+1256620 [id=256620, c=4];
+}

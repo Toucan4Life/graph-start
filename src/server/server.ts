@@ -41,7 +41,7 @@ app.get("/compress", (_req, res) => {
     fs.unlinkSync(path.join("./data/v3/compressedGraphs", file));
   });
 
-  for (let i = 0; i <= 31 - 1; i++) {
+  for (let i = 0; i <= 56 - 1; i++) {
     console.log(`Loading extended subgraph ${i}`);
     const data = fs.readFileSync("./data/v3/extendedGraphs/" + i + ".dot");
     const compressed = Buffer.from(pako.deflate(data));
@@ -65,7 +65,7 @@ app.get("/egraph", (_req, res) => {
     records.map((record) => [record["bgg_id"], record]),
   );
   const inputSubgraphs = [];
-  for (let i = 0; i <= 31 - 1; i++) {
+  for (let i = 0; i <= 56 - 1; i++) {
     console.log(`Loading extended subgraph ${i}`);
     const graph: Graph<NodeInputData, LinkData> = fromDot(
       fs.readFileSync("./extendedGraph/subgraph_" + i + ".dot").toString(),
@@ -87,7 +87,7 @@ app.get("/egraph", (_req, res) => {
     nodeCommunityDict[node.data.id] = node.data.c;
   });
 
-  for (let i = 0; i <= 31 - 1; i++) {
+  for (let i = 0; i <= 56 - 1; i++) {
     enrichedSubgraphs[i].forEachNode((node) => {
       node.data.pos = nodeLayoutDict[node.data.id];
       node.data.c = nodeCommunityDict[node.data.id];
@@ -437,7 +437,7 @@ function writeGeojson(subgraph: Graph<NodeData, LinkData>) {
         max_players_best: node.data.max_players_best,
         min_time: node.data.min_time,
         max_time: node.data.max_time,
-        bayes_rating: node.data.bayes_rating,
+        // bayes_rating: node.data.bayes_rating, // not used
         id: node.data.id,
         year: node.data.year,
         c: node.data.c,
@@ -462,12 +462,12 @@ function enrichGraphs(
     const gameData = gameDataMap.get(node.data.id.toString());
     if (!gameData) return;
 
-    const votes = parseInt(gameData["num_votes"] || "0", 10);
-    if (isNaN(votes)) {
-      console.log(
-        `Failed to parse num_votes: ${gameData["num_votes"]} for ID: ${node.data.id}`,
-      );
-    }
+    // const votes = parseInt(gameData["num_votes"] || "0", 10) + 1; // Add 1 to avoid log(0)
+    // if (isNaN(votes)) {
+    //   console.log(
+    //     `Failed to parse num_votes: ${gameData["num_votes"]} for ID: ${node.data.id}`,
+    //   );
+    // }
 
     enrichedGraph.addNode(node.data.id, {
       id: node.data.id,
@@ -483,9 +483,10 @@ function enrichGraphs(
       max_players_best: gameData["max_players_best"],
       min_time: gameData["min_time"],
       max_time: gameData["max_time"],
-      bayes_rating: gameData["bayes_rating"],
+      // bayes_rating: gameData["bayes_rating"], // not used
       year: gameData["year"],
-      size: gameData["num_votes"],
+      // size: Math.log10(votes).toString(),
+      size: gameData["num_votes"] || "1",
       c:
         node.data.community == undefined
           ? undefined
@@ -549,9 +550,9 @@ interface NodeData extends NodeInputData {
   max_players_best: string;
   min_time: string;
   max_time: string;
-  bayes_rating: string;
+  // bayes_rating: string;
   year: string;
-  c: string;
+  // c: string;
 }
 
 interface LinkData {

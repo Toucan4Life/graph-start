@@ -1,0 +1,33 @@
+graph G {
+0 [id=313349, label="Indus 2500 BCE"];
+1 [id=321304, label="Honey Scouts"];
+2 [id=325882, label="Bharata 600 BC"];
+3 [id=342593, label="Namma Bengaluru"];
+4 [id=345069, label="Karigar-e-Taj"];
+5 [id=345408, label="Chai Garam"];
+6 [id=355704, label=Parikrama];
+7 [id=372373, label=GridL];
+8 [id=373877, label=Lakshadweep];
+9 [id=376029, label=Panchayat];
+10 [id=382647, label="Vallamkali: Boat Races of Alappuzha"];
+0 -- 1 [weight=0.1322314050];
+0 -- 2 [weight=0.0568181818];
+0 -- 3 [weight=0.0873015873];
+0 -- 4 [weight=0.1275167785];
+0 -- 5 [weight=0.1196172249];
+0 -- 6 [weight=0.0764331210];
+0 -- 8 [weight=0.0591715976];
+2 -- 5 [weight=0.0837988827];
+3 -- 5 [weight=0.1068702290];
+4 -- 5 [weight=0.1282051282];
+4 -- 8 [weight=0.0900900901];
+5 -- 6 [weight=0.1132075472];
+5 -- 8 [weight=0.1065088757];
+5 -- 10 [weight=0.1136363636];
+6 -- 7 [weight=0.1791044776];
+6 -- 8 [weight=0.1090909091];
+8 -- 9 [weight=0.1041666667];
+5 -- 1372571 [weight=0.0403225806];
+1372571 [id=372571, c=0];
+6 -- 1372571 [weight=0.0662983425];
+}
