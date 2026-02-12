@@ -84,7 +84,7 @@ app.get("/egraph", (_req, res) => {
 
   layoutsubgraphs.forEachNode((node) => {
     nodeLayoutDict[node.data.id] = node.data.pos;
-    nodeCommunityDict[node.data.id] = node.data.c;
+    nodeCommunityDict[node.data.id] = node.data.c || "";
   });
 
   for (let i = 0; i <= 56 - 1; i++) {
@@ -313,7 +313,7 @@ function writeVoronoi(subgraph: Graph<NodeData, LinkData>) {
     nodes.push({
       x,
       y,
-      subgraph: parseInt(node.data.c),
+      subgraph: parseInt(node.data.c || "0"),
       id: node.data.id.toString(),
     });
   });
@@ -425,6 +425,7 @@ function writeGeojson(subgraph: Graph<NodeData, LinkData>) {
         coordinates,
       },
       properties: {
+        id: node.data.id,
         label: node.data.label,
         size: node.data.size,
         ratings: node.data.rating,
@@ -437,10 +438,9 @@ function writeGeojson(subgraph: Graph<NodeData, LinkData>) {
         max_players_best: node.data.max_players_best,
         min_time: node.data.min_time,
         max_time: node.data.max_time,
-        // bayes_rating: node.data.bayes_rating, // not used
-        id: node.data.id,
         year: node.data.year,
         c: node.data.c,
+        tags: node.data.tags,
       },
     });
   });
@@ -473,6 +473,7 @@ function enrichGraphs(
       id: node.data.id,
       pos: node.data.pos,
       label: gameData["name"],
+      community: node.data.community,
       rating: gameData["avg_rating"],
       complexity: gameData["complexity"],
       min_players: gameData["min_players"],
@@ -483,7 +484,6 @@ function enrichGraphs(
       max_players_best: gameData["max_players_best"],
       min_time: gameData["min_time"],
       max_time: gameData["max_time"],
-      // bayes_rating: gameData["bayes_rating"], // not used
       year: gameData["year"],
       // size: Math.log10(votes).toString(),
       size: gameData["num_votes"] || "1",
@@ -491,6 +491,7 @@ function enrichGraphs(
         node.data.community == undefined
           ? undefined
           : node.data.community.toString(),
+      tags: `${gameData["category"]};${gameData["mechanic"]};${gameData["family"]}`,
     });
   });
 
@@ -525,6 +526,7 @@ interface GameRecord {
   max_time: string;
   category: string;
   mechanic: string;
+  family: string;
   bayes_rating: string;
   year: string;
   label: string;
@@ -542,6 +544,8 @@ interface NodeData extends NodeInputData {
   size: string;
   rating: string;
   complexity: string;
+  c?: string;
+  tags?: string;
   min_players: string;
   max_players: string;
   min_players_rec: string;
@@ -550,9 +554,7 @@ interface NodeData extends NodeInputData {
   max_players_best: string;
   min_time: string;
   max_time: string;
-  // bayes_rating: string;
   year: string;
-  // c: string;
 }
 
 interface LinkData {
@@ -564,4 +566,5 @@ interface NodeInputData {
   label: string;
   community: number;
   pos: string;
+  c?: string;
 }
