@@ -11,6 +11,7 @@
   "dependencies": {
     "@turf/turf": "^7.2.0",
     "axios": "^1.6.8",
+    "better-sqlite3": "^12.6.2",
     "buffer-split": "^1.0.0",
     "d3": "^7.9.0",
     "d3-geo-voronoi": "^2.1.0",

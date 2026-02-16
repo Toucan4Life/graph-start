@@ -18,6 +18,7 @@ import { execSync } from "child_process";
 import type { Feature, Polygon, GeoJsonProperties } from "geojson";
 import lz4 from "lz4js";
 import pako from "pako";
+import Database from "better-sqlite3";
 const app = express();
 const port = 3010;
 app.use(cors());
@@ -34,6 +35,93 @@ app.listen(port, () => {
 
 app.get("/", (_req, res) => {
   res.send("Hello World!");
+});
+app.get("/localdb", (_req, res) => {
+  fs.unlinkSync(path.join("./data/v3/localdb", "local.db"));
+
+  const db = new Database("./data/v3/localdb/local.db");
+
+  const schema = fs.readFileSync("./input/schema.sql", "utf8");
+  db.exec(schema);
+
+  const geojson = JSON.parse(
+    fs.readFileSync("./data/v3/geojson/points.geojson", "utf8"),
+  );
+
+  const insertGame = db.prepare(`
+  INSERT INTO games (
+    id, label, size, ratings, complexity,
+    min_players, max_players,
+    min_players_rec, max_players_rec,
+    min_players_best, max_players_best,
+    min_time, max_time,
+    year, lon, lat
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`);
+
+  const insertTag = db.prepare(`
+  INSERT INTO game_tags (game_id, tag, tag_type)
+  VALUES (?, ?, ?)
+`);
+
+  const insertMany = db.transaction((features) => {
+    for (const f of features) {
+      const p = f.properties;
+      const [lon, lat] = f.geometry.coordinates;
+
+      const toInt = (v) => (v === "" || v == null ? null : parseInt(v));
+      const toFloat = (v) => (v === "" || v == null ? null : parseFloat(v));
+
+      insertGame.run(
+        p.id,
+        p.label,
+        toInt(p.size),
+        toFloat(p.ratings),
+        toFloat(p.complexity),
+        toInt(p.min_players),
+        toInt(p.max_players),
+        toInt(p.min_players_rec),
+        toInt(p.max_players_rec),
+        toInt(p.min_players_best),
+        toInt(p.max_players_best),
+        toInt(p.min_time),
+        toInt(p.max_time),
+        toInt(p.year),
+        lon,
+        lat,
+      );
+
+      if (p.tags) {
+        const [categories, mechanics, families] = p.tags.split(";");
+
+        const parseTags = (str) =>
+          str
+            ? str
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean)
+            : [];
+
+        for (const tag of parseTags(categories)) {
+          insertTag.run(p.id, parseInt(tag), "category");
+        }
+
+        for (const tag of parseTags(mechanics)) {
+          insertTag.run(p.id, parseInt(tag), "mechanic");
+        }
+
+        for (const tag of parseTags(families)) {
+          insertTag.run(p.id, parseInt(tag), "family");
+        }
+      }
+    }
+  });
+
+  insertMany(geojson.features);
+  res.send("Done dbing");
+  // sqlite3 local.db .dump > dump.sql
+  // sed -i '/PRAGMA/d;/BEGIN TRANSACTION/d;/COMMIT/d' dump.sql
+  //  npx wrangler d1 execute bgg-data --file=dump.sql --remote
 });
 
 app.get("/compress", (_req, res) => {
